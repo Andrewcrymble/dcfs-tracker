@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DC&S Order Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f8f6f2;--surface:#fff;--border:#e2d9cc;--gold:#8a6f3a;--gold-l:#b89a5e;--text:#1e2530;--muted:#7a7068;--danger:#c0392b}
+body{background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;font-size:14px;min-height:600px;overflow-y:visible}
+input,select,textarea{width:100%;padding:8px 11px;background:#fff;border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;box-sizing:border-box;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical}
+button{cursor:pointer;font-family:'Jost',sans-serif}
+.btn{padding:8px 16px;border:none;border-radius:2px;font-size:11px;letter-spacing:.08em;font-family:'Cinzel',serif}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-dark{background:#1e2530;color:#fff}
+.btn-sm{padding:5px 10px;font-size:10px}
+
+/* Header */
+.hdr{background:#1e2530;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-brand{font-family:'Cinzel',serif;font-size:13px;color:#b89a5e;letter-spacing:.1em}
+.hdr-sub{font-family:'Jost',sans-serif;font-size:10px;color:#94a3b8;margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:12px}
+#price-status{font-size:10px;color:#94a3b8;font-style:italic}
+#sync-status{font-size:10px;color:#94a3b8}
+.tab-btns{display:flex;gap:3px}
+.tab-btn{padding:6px 14px;background:transparent;color:#9ca3af;border:1px solid #3d4a5c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;border-radius:2px}
+.tab-btn.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+
+/* Stats */
+.stats-row{display:flex;gap:10px;padding:16px 20px 0;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid var(--border);padding:12px 16px;border-radius:2px;min-width:130px;flex:1}
+.stat-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'Cinzel',serif}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:22px;line-height:1}
+
+/* Toolbar */
+.toolbar{display:flex;gap:8px;padding:14px 20px;flex-wrap:wrap;align-items:center}
+.toolbar input{max-width:300px}
+.toolbar select{width:auto;min-width:140px}
+
+/* Order list */
+#orders-list{padding:0 20px 20px}
+.orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:11px;margin-top:6px}
+.ocard{background:#fff;border:1px solid var(--border);border-left:3px solid var(--gold);padding:15px;border-radius:2px;cursor:pointer;position:relative;transition:all .2s}
+.ocard:hover{box-shadow:0 3px 14px rgba(184,154,94,.12)}
+.ocard-del{position:absolute;top:8px;right:8px;background:none;border:none;color:#cbd5e1;font-size:13px;padding:3px;line-height:1}
+.ocard-del:hover{color:var(--danger)}
+.ocard-name{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.06em;margin-bottom:2px}
+.ocard-sub{font-size:11px;color:var(--muted);margin-bottom:6px}
+.ocard-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.badge{padding:2px 7px;border-radius:1px;font-size:9px;letter-spacing:.06em;font-family:'Cinzel',serif}
+.ocard-price{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold)}
+.ocard-bal{font-size:10px;color:#c2410c;margin-top:2px}
+.pbar{height:2px;background:#e2d9cc;border-radius:1px;margin-top:10px}
+.pbar-fill{height:100%;border-radius:1px;transition:width .3s}
+.empty-msg{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty-msg h3{font-family:'Cinzel',serif;font-size:14px;margin-bottom:8px;color:var(--text)}
+
+/* Form */
+#form-area{padding:0 20px 40px}
+.form-box{background:#fff;border:1px solid var(--border);border-radius:2px}
+.form-hdr{background:#1e2530;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.form-hdr h2{font-family:'Cinzel',serif;font-size:13px;color:#b89a5e;letter-spacing:.08em}
+.form-hdr-actions{display:flex;gap:8px;align-items:center}
+.form-ref{font-size:10px;color:#94a3b8}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px}
+.s2{grid-column:span 2}
+.fsec{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:var(--gold-l);text-transform:uppercase;padding:14px 0 2px;border-bottom:1px solid var(--border)}
+.flbl{font-size:10px;color:var(--muted);margin-bottom:4px;letter-spacing:.05em}
+.tile-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.tile{background:var(--bg);border:1px solid var(--border);padding:8px 12px;border-radius:2px;cursor:pointer;font-size:12px;transition:all .15s;display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:120px;user-select:none}
+.tile:hover{border-color:var(--gold-l)}
+.tile.on{background:#fef3e2;border-color:var(--gold-l)}
+.tile-n{font-weight:400}
+.tile-p{font-size:10px;color:var(--muted)}
+.tile.on .tile-p{color:var(--gold)}
+.tile-sub{font-size:10px;color:var(--muted)}
+.form-footer{background:#f8f6f2;border-top:1px solid var(--border);padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.form-footer-total{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold)}
+.form-actions{display:flex;gap:8px}
+.status-btns{display:flex;flex-wrap:wrap;gap:6px}
+.sbtn{padding:5px 10px;border:none;border-radius:2px;font-size:10px;font-family:'Cinzel',serif;letter-spacing:.06em}
+.note-entry{background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:8px 10px;margin-bottom:6px;position:relative}
+.note-ts{font-size:10px;color:var(--muted);margin-bottom:3px}
+.note-author{font-weight:500;color:var(--text)}
+.note-text{font-size:13px}
+.note-del{position:absolute;top:6px;right:6px;background:none;border:none;color:#cbd5e1;font-size:11px;cursor:pointer}
+.note-input-row{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+.psummary{background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:14px}
+.psummary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ps-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
+.ps-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)}
+.mbox{background:#fff;border:1px solid var(--border);padding:8px 12px;border-radius:2px;text-align:center}
+.mbox-lbl{font-size:9px;color:var(--muted);letter-spacing:.05em}
+.mbox-val{font-family:'Cormorant Garamond',serif;font-size:16px}
+.margin-row{display:flex;gap:8px}
+.doc-btns{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg)}
+.btn-blue{background:#1d4ed8;color:#fff}
+.btn-green{background:#15803d;color:#fff}
+.btn-purple{background:#7c3aed;color:#fff}
+
+/* Prices tab */
+#tab-prices{padding:20px}
+.price-section{margin-bottom:20px}
+.price-sec-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg);padding:6px 8px;text-align:left;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:5px 8px;border-bottom:1px solid #f0ebe4}
+td.num{text-align:right;font-family:'Cormorant Garamond',serif;font-size:13px}
+tr:nth-child(even) td{background:#faf8f4}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-brand">David Crymble & Sons</div>
+    <div class="hdr-sub">Headstone & Memorial Order Management</div>
+  </div>
+  <div class="hdr-right">
+    <span id="price-status">⟳ Loading prices…</span>
+    <span id="sync-status"></span>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showTab('orders')">Orders</button>
+      <button class="tab-btn" onclick="showTab('prices')">Price List</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-orders">
+  <div id="stats-row" class="stats-row"></div>
+  <div class="toolbar" id="toolbar">
+    <input type="text" id="srch" placeholder="Search name or order ID…" oninput="renderList()">
+    <select id="fstatus" onchange="renderList()">
+      <option value="">All Statuses</option>
+      <option value="enquiry">Enquiry</option>
+      <option value="quoted">Quoted</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="design">In Design</option>
+      <option value="production">Production</option>
+      <option value="ready">Ready</option>
+      <option value="installed">Installed</option>
+    </select>
+    <button class="btn btn-gold" onclick="openNewOrder()">+ New Order</button>
+    <button class="btn btn-dark btn-sm" onclick="syncFromSheet()">⟳ Sync</button>
+  </div>
+  <div id="orders-list" style="min-height:300px;padding:0 20px 40px"></div>
+  <div id="form-area"></div>
+</div>
+
+<div id="tab-prices" style="display:none">
+  <div id="price-detail-status" style="padding:10px 20px;font-size:11px;color:var(--muted)"></div>
+  <div id="price-tables" style="padding:0 20px"></div>
+</div>
+
+<script>
+// ── CONFIG ──
+const SHEET_ID = "1zLOSUsLgwglGkQkKa9x11EEIB04s2EOy1cBLBllkbRE";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdKAcNZ8hnOQ3QIfFyT8B4Y_8mzGCsoI5CEKAJbGAwE7klMswyscdIq0AWOQusqjg/exec";
+const BASE = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`;
+const TABS = {
+  headstones:  BASE + "%F0%9F%AA%A8%20Headstones",
+  surrounds:   BASE + "%F0%9F%94%B2%20Surrounds",
+  stones:      BASE + "%F0%9F%94%B2%20Stones",
+  accessories: BASE + "%F0%9F%8E%81%20Accessories",
+  cemeteries:  BASE + "%E2%9B%AA%20Cemetery%20Fees",
+  newIns:      BASE + "%E2%9C%8D%EF%B8%8F%20New%20Inscriptions",
+  addIns:      BASE + "%E2%9E%95%20Additional%20Inscriptions",
+};
+const STORE_KEY = "dcfs-v7";
+const STATUSES = [
+  {id:"enquiry",label:"Enquiry",color:"#94a3b8"},
+  {id:"quoted",label:"Quoted",color:"#f59e0b"},
+  {id:"confirmed",label:"Confirmed",color:"#3b82f6"},
+  {id:"design",label:"In Design",color:"#8b5cf6"},
+  {id:"production",label:"Production",color:"#f97316"},
+  {id:"ready",label:"Ready",color:"#10b981"},
+  {id:"installed",label:"Installed",color:"#059669"},
+];
+const PAY = ["Unpaid","Deposit Paid","Part Paid","Paid in Full"];
+const PAYCOL = {"Paid in Full":"#10b981","Unpaid":"#ef4444","Deposit Paid":"#f59e0b","Part Paid":"#f97316"};
+const HS_COLOURS = [
+  {label:"Black",adj:0,note:"Stock price"},
+  {label:"SA Impala",adj:50,note:"+£50"},
+  {label:"Bahamas",adj:0,note:"Stock price"},
+  {label:"Grey",adj:-50,note:"-£50"},
+];
+const INS_COLOURS = ["Silver","Gold","White"];
+
+// ── STATE ──
+let orders = [];
+let prices = {
+  headstones:[],surrounds:[],stones:[],accessories:[],cemeteries:[],
+  inscription:[],
+  newIns:{freeLetters:100,extraRate:4,styles:[]},
+  addIns:{rate:5,minimum:200,styles:[]},
+};
+let editingId = null;
+
+// ── HELPERS ──
+const fmt = n => "£"+Number(n||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc = s => (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const v = id => document.getElementById(id);
+const gv = id => (v(id)||{}).value||"";
+const getLF = () => prices.newIns?.freeLetters||100;
+const getNR = () => prices.newIns?.extraRate||4;
+const getAR = () => prices.addIns?.rate||5;
+const getAM = () => prices.addIns?.minimum||200;
+const countLetters = t => (t||"").replace(/[^a-zA-Z]/g,"").length;
+
+function setSyncStatus(msg,col){
+  const el=v("sync-status");
+  if(el){el.textContent=msg;if(col)el.style.color=col;}
+}
+
+// ── INSCRIPTION CHARGE ──
+function calcLetterCharge(text,type){
+  const letters=countLetters(text);
+  if(type==="additional") return Math.max(getAM(),letters*getAR());
+  const extra=Math.max(0,letters-getLF());
+  return extra*getNR();
+}
+
+// ── TOTAL ──
+function calcTotal(o){
+  if(!o)return 0;
+  const hs=(prices.headstones.find(h=>h.type===o.hsType&&h.size===o.hsSize)||{sell:0}).sell;
+  const colAdj=o.hsColourAdj||0;
+  const surr=o.surroundType?(prices.surrounds.find(s=>s.type===o.surroundType)||{sell:0}).sell:0;
+  const gran=(o.surroundGranite&&o.surroundType)?(prices.surrounds.find(s=>s.type===o.surroundType)||{graniteExtra:0}).graniteExtra:0;
+  const stone=o.stoneType?(o.surroundType
+    ?(prices.stones.find(s=>s.type===o.stoneType)||{withSurround:0}).withSurround
+    :(prices.stones.find(s=>s.type===o.stoneType)||{standard:0}).standard):0;
+  const accs=(o.accessories||[]).reduce((s,n)=>s+((prices.accessories.find(a=>a.name===n)||{sell:0}).sell),0);
+  const cem=o.cemetery?(prices.cemeteries.find(c=>c.name===o.cemetery)||{fee:0}).fee:0;
+  const ins=(o.inscriptionLines||0)*(o.inscriptionPpl||35);
+  const letCharge=calcLetterCharge(o.inscriptionText||"",o.inscriptionType||"new");
+  const extras=(o.extraCharges||[]).reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  return hs+colAdj+surr+gran+stone+accs+cem+ins+letCharge+extras;
+}
+
+// ── PERSISTENCE ──
+function localSave(){try{localStorage.setItem(STORE_KEY,JSON.stringify(orders));}catch{}}
+function localLoad(){try{const s=localStorage.getItem(STORE_KEY);return s?JSON.parse(s):[];}catch{return[];}}
+
+async function syncFromSheet(){
+  setSyncStatus("⟳ Loading…","#f59e0b");
+  // Try direct fetch first
+  try{
+    const res=await fetch(SCRIPT_URL+"?t="+Date.now(),{
+      method:"GET",
+      redirect:"follow",
+    });
+    const text=await res.text();
+    // Handle JSONP response if wrapped
+    const jsonText=text.startsWith("{") ? text : text.replace(/^[^(]+\((.+)\)[\s;]*$/s,"$1");
+    const json=JSON.parse(jsonText);
+    if(json.success&&Array.isArray(json.orders)&&json.orders.length>0){
+      const real=json.orders.filter(r=>r["Order ID"]&&r["Order ID"]!=="SETUP_ROW"&&!String(r["Order ID"]).startsWith("SETUP"));
+      if(real.length>0){
+        orders=real.map(r=>rowToOrder(r));
+        localSave();
+        setSyncStatus("✓ "+orders.length+" order"+(orders.length!==1?"s":"")+" loaded","#10b981");
+        setTimeout(()=>setSyncStatus(""),4000);
+        renderStats();renderList();
+        return;
+      }
+    }
+    setSyncStatus("0 orders in sheet","#94a3b8");
+    renderList();
+  }catch(e){
+    console.warn("Direct fetch failed, trying JSONP:",e);
+    // Try JSONP as fallback
+    try{
+      await syncViaJSONP();
+    }catch(e2){
+      console.error("Both sync methods failed:",e2);
+      orders=localLoad();
+      setSyncStatus("⚠ Could not connect to Sheet","#ef4444");
+      renderList();
+    }
+  }
+}
+
+function syncViaJSONP(){
+  return new Promise((resolve,reject)=>{
+    const cb="dcfs_"+Date.now();
+    const s=document.createElement("script");
+    const timer=setTimeout(()=>{
+      delete window[cb];s.remove();
+      reject(new Error("JSONP timeout"));
+    },8000);
+    window[cb]=function(json){
+      clearTimeout(timer);delete window[cb];s.remove();
+      if(json.success&&Array.isArray(json.orders)&&json.orders.length>0){
+        const real=json.orders.filter(r=>r["Order ID"]&&r["Order ID"]!=="SETUP_ROW");
+        if(real.length>0){
+          orders=real.map(r=>rowToOrder(r));
+          localSave();
+          setSyncStatus("✓ "+orders.length+" order"+(orders.length!==1?"s":"")+" loaded","#10b981");
+          setTimeout(()=>setSyncStatus(""),4000);
+          renderStats();renderList();
+          resolve(true);return;
+        }
+      }
+      setSyncStatus("","");renderList();resolve(false);
+    };
+    s.onerror=()=>{clearTimeout(timer);delete window[cb];s.remove();reject(new Error("JSONP script error"));};
+    s.src=SCRIPT_URL+"?callback="+cb+"&t="+Date.now();
+    document.head.appendChild(s);
+  });
+}
+
+function rowToOrder(r){
+  const o={
+    id:r["Order ID"]||uid(),
+    createdAt:r["Created"]||new Date().toISOString(),
+    status:(r["Status"]||"enquiry").toLowerCase().trim(),
+    paymentStatus:r["Payment Status"]||"Unpaid",
+    customerName:r["Customer Name"]||"",
+    phone:r["Phone"]||"",email:r["Email"]||"",address:r["Address"]||"",
+    deceasedName:r["Deceased Name"]||"",
+    deceasedDob:toInputDate(r["Date of Birth"]),
+    deceasedDod:toInputDate(r["Date of Passing"]),
+    orderDate:toInputDate(r["Order Date"])||new Date().toISOString().slice(0,10),
+    hsType:r["Headstone Type"]||"",hsSize:r["Headstone Size"]||"",
+    hsColour:r["Headstone Colour"]||"",hsFinish:r["Headstone Finish"]||"",hsColourAdj:0,
+    surroundType:r["Surround Type"]||"",surroundGranite:r["Granite Upgrade"]==="Yes",
+    stoneType:r["Stone / Chippings"]||"",
+    accessories:r["Accessories"]?r["Accessories"].split(", ").filter(Boolean):[],
+    inscriptionType:r["Inscription Type"]==="Additional on Existing"?"additional":"new",
+    inscriptionText:r["Inscription Text"]||"",
+    inscriptionLines:parseInt(r["Inscription Lines"])||0,
+    inscriptionStyle:r["Letter Style"]||"Standard",
+    inscriptionColour:r["Inscription Colour"]||"Silver",
+    inscriptionPpl:parseFloat(r["Price Per Line"])||35,
+    cemetery:r["Cemetery / Location"]||"",graveNumber:r["Grave Number / Plot"]||"",
+    ownerName:r["Grave Owner Name"]||"",ownerPhone:r["Owner Phone"]||"",
+    ownerAddress:r["Owner Address"]||"",ownerEmail:r["Owner Email"]||"",
+    ownerRelationship:r["Owner Relationship"]||"",
+    depositPaid:r["Deposit Paid"]||"",
+    proofDate:toInputDate(r["Proof Date"]),
+    artworkApproved:r["Proof Approved"]==="Yes",
+    productionDate:toInputDate(r["Production Start"]),
+    installDate:toInputDate(r["Install Date"]),
+    artworkNotes:r["Artwork Notes"]||"",notes:r["General Notes"]||"",
+    folderLink:r["Folder Link"]||"",
+    totalPrice:parseFloat(r["Total Price"])||0,
+    extraCharges:r["Extra Charges"]?JSON.parse(r["Extra Charges"]):[], log:[],files:[],
+  };
+  // Recalculate total from prices if stored total is 0
+  if(o.totalPrice===0&&prices.headstones.length>0){
+    o.totalPrice=calcTotal(o);
+  }
+  return o;
+}
+
+async function saveOrderToSheet(o){
+  setSyncStatus("⟳ Saving…","#f59e0b");
+  try{
+    const res=await fetch(SCRIPT_URL,{
+      method:"POST",
+      body:JSON.stringify({action:"upsert",order:o}),
+    });
+    const json=await res.json();
+    if(json.success){setSyncStatus("✓ Saved","#10b981");setTimeout(()=>setSyncStatus(""),3000);}
+    else setSyncStatus("⚠ Save failed: "+json.message,"#ef4444");
+  }catch(e){
+    // Try no-cors as fallback (fire and forget)
+    console.warn("Saving with no-cors fallback");
+    fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify({action:"upsert",order:o})});
+    setSyncStatus("✓ Saved (offline mode)","#f59e0b");
+    setTimeout(()=>setSyncStatus(""),3000);
+  }
+}
+
+async function deleteOrderFromSheet(id){
+  try{await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"delete",orderId:id})});}catch{}
+}
+
+// Convert dd/mm/yyyy or dd/mm/yyyy hh:mm to yyyy-MM-dd for date inputs
+function toInputDate(s){
+  if(!s||s==="Invalid Date")return"";
+  // Already in yyyy-MM-dd format
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  // Convert dd/mm/yyyy
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m)return`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  return"";
+}
+function parseCSV(text){
+  const rows=[];let cur="",inQ=false,row=[];
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"'){if(inQ&&text[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){row.push(cur.trim());cur="";}
+    else if((c==='\n'||c==='\r')&&!inQ){
+      if(c==='\r'&&text[i+1]==='\n')i++;
+      row.push(cur.trim());rows.push(row);row=[];cur="";
+    }else cur+=c;
+  }
+  if(cur||row.length){row.push(cur.trim());rows.push(row);}
+  return rows.filter(r=>r.some(c=>c!==""));
+}
+const toNum=s=>parseFloat((s||"").replace(/[£,\s%]/g,""))||0;
+const SKIP_VALS=["David Crymble","How to use","Tab","Type","Size","Sell Price","Cost Price",
+  "Standard Price","With Surround","Surround Type","Stone / Chipping","Item Name",
+  "Cemetery / Location","Letter Style","Rule","Field","Headstone Type","Style Pricing",
+  "Instructions","Headstones","Surrounds","Stones","Accessories","Cemetery","Inscription",
+  "Summary","💡","←","Margin","Fee (£)","Notes","Size / Description"];
+const isSkip=val=>!val||SKIP_VALS.some(p=>(val||"").includes(p));
+
+async function fetchPrices(){
+  v("price-status").textContent="⟳ Loading prices…";
+  try{
+    const safe=async url=>{try{const r=await fetch(url);return parseCSV(await r.text());}catch{return[];}};
+    const [hsR,surR,stR,accR,cemR,niR,aiR]=await Promise.all([
+      safe(TABS.headstones),safe(TABS.surrounds),safe(TABS.stones),
+      safe(TABS.accessories),safe(TABS.cemeteries),safe(TABS.newIns),safe(TABS.addIns)
+    ]);
+    prices.headstones=[];for(const r of hsR){const t=(r[1]||"").trim(),s=(r[2]||"").trim(),sell=toNum(r[3]),cost=toNum(r[4]);if(t&&s&&sell&&!isSkip(t))prices.headstones.push({type:t,size:s,sell,cost});}
+    prices.surrounds=[];for(const r of surR){const t=(r[1]||"").trim(),sell=toNum(r[2]),gran=toNum(r[3]),cost=toNum(r[4]);if(t&&sell&&!isSkip(t))prices.surrounds.push({type:t,sell,graniteExtra:gran,cost});}
+    prices.stones=[];for(const r of stR){const t=(r[1]||"").trim();if(t&&!isSkip(t))prices.stones.push({type:t,standard:toNum(r[2]),withSurround:toNum(r[3])});}
+    prices.accessories=[];for(const r of accR){const n=(r[1]||"").trim(),s=(r[2]||"").trim(),sell=toNum(r[3]),cost=toNum(r[4]);if(n&&sell&&!isSkip(n))prices.accessories.push({name:n,size:s,sell,cost});}
+    prices.cemeteries=[];for(const r of cemR){const n=(r[1]||"").trim(),fee=toNum(r[2]),notes=(r[3]||"").trim();if(n&&!isSkip(n))prices.cemeteries.push({name:n,fee,notes});}
+    let fl=100,er=4,ns=[];
+    for(const r of niR){const l=(r[1]||"").trim(),v3=toNum(r[3]);if(l.includes("Free Letter")){fl=toNum(r[2])||100;}else if(l.includes("Extra letters")){er=toNum(r[2])||4;}else if(l&&v3>0&&!isSkip(l))ns.push({style:l,costPerLetter:toNum(r[2]),sellPerLetter:v3});}
+    prices.newIns={freeLetters:fl,extraRate:er,styles:ns};
+    prices.inscription=ns;
+    let ar=5,am=200,as2=[];
+    for(const r of aiR){const l=(r[1]||"").trim(),v3=toNum(r[3]);if(l.includes("Rate per Letter")){ar=toNum(r[2])||5;}else if(l.includes("Minimum Charge")){am=toNum(r[2])||200;}else if(l&&v3>0&&!isSkip(l))as2.push({style:l,costPerLetter:toNum(r[2]),sellPerLetter:v3});}
+    prices.addIns={rate:ar,minimum:am,styles:as2};
+    const n=prices.headstones.length+prices.surrounds.length+prices.stones.length+prices.accessories.length+prices.cemeteries.length;
+    const t=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+    v("price-status").textContent=`✓ Live prices · ${t}`;
+    v("price-status").style.color="#10b981";
+    v("price-detail-status").textContent=`✓ ${n} items loaded · Free: ${fl} letters · Extra: £${er}/letter · Add-on: £${ar}/letter (min £${am})`;
+    renderPrices();
+    // Recalculate totals for any orders that have £0
+    orders.forEach(o=>{if(!o.totalPrice||o.totalPrice===0)o.totalPrice=calcTotal(o);});
+    localSave();
+    renderStats();renderList();
+    if(editingId)renderForm(); // Re-render form to populate dropdowns with loaded prices
+  }catch(e){
+    console.error("Price fetch error:",e);
+    v("price-status").textContent="⚠ Price sheet unreachable";
+    v("price-status").style.color="var(--danger)";
+  }
+}
+
+// ── UI HELPERS ──
+function showTab(t){
+  v("tab-orders").style.display=t==="orders"?"block":"none";
+  v("tab-prices").style.display=t==="prices"?"block":"none";
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",["orders","prices"][i]===t));
+}
+
+function statusBadge(id){
+  const s=STATUSES.find(x=>x.id===id)||STATUSES[0];
+  return `<span class="badge" style="background:${s.color}22;color:${s.color}">${s.label}</span>`;
+}
+function payBadge(p){
+  const col=PAYCOL[p]||"#94a3b8";
+  return `<span class="badge" style="background:${col}22;color:${col}">${p||"Unpaid"}</span>`;
+}
+function progBar(statusId){
+  const idx=STATUSES.findIndex(s=>s.id===statusId);
+  const col=STATUSES[idx]?.color||"#94a3b8";
+  const pct=Math.round(((idx+1)/STATUSES.length)*100);
+  return `<div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${col}"></div></div>`;
+}
+function fmtDate(s){if(!s)return "";try{return new Date(s).toLocaleDateString("en-GB");}catch{return s;}}
+function fmtTs(iso){const d=new Date(iso);return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
+
+// ── STATS ──
+function renderStats(){
+  const total=orders.length;
+  const active=orders.filter(o=>o.status!=="installed").length;
+  const revenue=orders.reduce((s,o)=>s+(o.totalPrice||0),0);
+  const unpaid=orders.reduce((s,o)=>s+Math.max(0,(o.totalPrice||0)-parseFloat(o.depositPaid||0)),0);
+  const installs=orders.filter(o=>o.installDate&&new Date(o.installDate)>=new Date()&&o.status!=="installed").length;
+  v("stats-row").innerHTML=[
+    ["Orders",total,"var(--gold)"],
+    ["Active",active,"#3b82f6"],
+    ["Pipeline",fmt(revenue),"var(--gold)"],
+    ["Outstanding",fmt(unpaid),unpaid>0?"#f97316":"#10b981"],
+    ["Due Installs",installs,"#10b981"],
+  ].map(([l,val,col])=>`<div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val" style="color:${col}">${val}</div></div>`).join("");
+}
+
+// ── ORDER LIST ──
+function renderList(){
+  const el=v("orders-list");
+  if(!el){console.error("orders-list not found!");return;}
+  
+  const q=(gv("srch")||"").toLowerCase().trim();
+  const fs=(gv("fstatus")||"").trim();
+  const filtered=orders.filter(o=>{
+    const mq=!q||[o.customerName,o.deceasedName,o.id].some(x=>(x||"").toLowerCase().includes(q));
+    const ms=!fs||(o.status||"").toLowerCase()===fs;
+    return mq&&ms;
+  });
+
+  console.log("renderList: orders="+orders.length+" filtered="+filtered.length+" el="+!!el);
+
+  el.innerHTML="";
+
+  if(!filtered.length){
+    el.innerHTML='<div style="padding:40px 20px;color:#7a7068;font-family:Jost,sans-serif">'+(orders.length?"No matching orders — try clearing the filter":"No orders yet — click + New Order")+"</div>";
+    return;
+  }
+
+  // Simple direct card rendering - no classes, pure inline styles
+  filtered.forEach((o,i)=>{
+    const total=o.totalPrice||0;
+    const bal=Math.max(0,total-parseFloat(o.depositPaid||0));
+    const ref=(o.id||"??????").slice(-6).toUpperCase();
+
+    const card=document.createElement("div");
+    card.style.cssText="background:#fff;border:1px solid #e2d9cc;border-left:3px solid #8a6f3a;padding:15px;margin:10px 20px;border-radius:2px;cursor:pointer;position:relative";
+
+    const name=document.createElement("div");
+    name.style.cssText="font-family:Cinzel,serif;font-size:13px;color:#1e2530;margin-bottom:3px";
+    name.textContent=o.customerName||"Unnamed";
+    card.appendChild(name);
+
+    const sub=document.createElement("div");
+    sub.style.cssText="font-size:11px;color:#7a7068;margin-bottom:6px";
+    sub.textContent=(o.deceasedName?"For: "+o.deceasedName:"Deceased TBC")+" · #"+ref;
+    card.appendChild(sub);
+
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;justify-content:space-between;align-items:center";
+    const left=document.createElement("div");
+    left.style.cssText="font-size:11px;color:#7a7068";
+    left.textContent=(o.hsType||"No headstone selected")+(o.status?" · "+o.status:"");
+    const right=document.createElement("div");
+    right.style.cssText="font-family:Cormorant Garamond,serif;font-size:20px;color:#8a6f3a;text-align:right";
+    right.textContent="£"+Number(total).toLocaleString("en-GB",{minimumFractionDigits:2});
+    if(bal>0){const b=document.createElement("div");b.style.cssText="font-size:10px;color:#c2410c";b.textContent="Bal: £"+Number(bal).toLocaleString("en-GB",{minimumFractionDigits:2});right.appendChild(b);}
+    row.appendChild(left);row.appendChild(right);
+    card.appendChild(row);
+
+    const del=document.createElement("button");
+    del.textContent="✕";
+    del.style.cssText="position:absolute;top:8px;right:8px;background:none;border:none;color:#ccc;cursor:pointer;font-size:13px";
+    del.onclick=function(e){e.stopPropagation();delOrder(o.id);};
+    card.appendChild(del);
+
+    card.onclick=function(){openEdit(o.id);};
+    el.appendChild(card);
+    console.log("Appended card "+i+": "+o.customerName);
+  });
+}
+
+// ── OPEN / CLOSE ──
+function openNewOrder(){
+  const o={
+    id:uid(),createdAt:new Date().toISOString(),
+    status:"enquiry",paymentStatus:"Unpaid",
+    customerName:"",phone:"",email:"",address:"",
+    deceasedName:"",deceasedDob:"",deceasedDod:"",orderDate:new Date().toISOString().slice(0,10),
+    hsType:"",hsSize:"",hsColour:"",hsColourAdj:0,hsFinish:"",
+    surroundType:"",surroundGranite:false,stoneType:"",accessories:[],
+    inscriptionType:"new",inscriptionText:"",inscriptionLines:0,
+    inscriptionStyle:"Standard",inscriptionColour:"Silver",inscriptionPpl:35,
+    cemetery:"",graveNumber:"",
+    ownerName:"",ownerPhone:"",ownerAddress:"",ownerEmail:"",ownerRelationship:"",
+    depositPaid:"",proofDate:"",artworkApproved:false,
+    productionDate:"",installDate:"",artworkNotes:"",notes:"",folderLink:"",
+    totalPrice:0,log:[],files:[],extraCharges:[],
+  };
+  orders.unshift(o);localSave();
+  editingId=o.id;
+  v("toolbar").style.display="none";
+  v("orders-list").innerHTML="";
+  renderStats();
+  renderForm();
+}
+
+function openEdit(id){
+  const found=orders.find(o=>o.id===id);
+  if(!found){
+    alert("Could not open order. Please click ⟳ Sync to reload.");
+    return;
+  }
+  editingId=id;
+  
+  // Hide toolbar and list
+  const tb=v("toolbar");if(tb)tb.style.display="none";
+  const ol=v("orders-list");if(ol)ol.innerHTML="";
+  
+  // Make sure form-area exists - create it if missing
+  let fa=v("form-area");
+  if(!fa){
+    fa=document.createElement("div");
+    fa.id="form-area";
+    const tab=v("tab-orders");
+    if(tab)tab.appendChild(fa);
+    else document.body.appendChild(fa);
+  }
+  fa.innerHTML="<div style='padding:20px;font-family:Jost,sans-serif;color:#7a7068'>Loading order form…</div>";
+  
+  // Small delay to let DOM settle before rendering
+  setTimeout(()=>{
+    try{
+      renderForm();
+    }catch(e){
+      console.error("renderForm failed:",e);
+      fa.innerHTML=`<div style="padding:20px;background:#fff;border:1px solid #e2d9cc;margin:10px 20px">
+        <p style="color:#c0392b;font-weight:500">Error: ${e.message}</p>
+        <button onclick="closeForm()" style="margin-top:10px;padding:6px 14px;background:#1e2530;color:#fff;border:none;cursor:pointer;font-family:Cinzel,serif;font-size:10px">← Back</button>
+      </div>`;
+    }
+  },50);
+}
+
+function closeForm(){
+  editingId=null;
+  v("form-area").innerHTML="";
+  v("toolbar").style.display="flex";
+  renderStats();renderList();
+}
+
+function getOrder(){
+  if(editingId===null||editingId===undefined)return null;
+  return orders.find(o=>o.id===editingId)||null;
+}
+
+function delOrder(id){
+  if(!confirm("Delete this order? This cannot be undone."))return;
+  orders=orders.filter(o=>String(o.id)!==String(id));
+  localSave();
+  if(String(editingId)===String(id))closeForm();
+  else{renderStats();renderList();}
+  deleteOrderFromSheet(id);
+}
+
+// ── TOGGLE HELPERS ──
+function toggleGranite(){const o=getOrder();if(!o)return;o.surroundGranite=!o.surroundGranite;updateOrder(o);renderForm();}
+function toggleArtApproved(){const o=getOrder();if(!o)return;o.artworkApproved=!o.artworkApproved;updateOrder(o);renderForm();}
+function setInsType(t){const o=getOrder();if(!o)return;o.inscriptionType=t;updateOrder(o);renderForm();}
+function setHsColour(label,adj){const o=getOrder();if(!o)return;o.hsColour=label;o.hsColourAdj=adj;updateOrder(o);renderForm();}
+function addExtraCharge(){
+  const o=getOrder();if(!o)return;
+  o.extraCharges=o.extraCharges||[];
+  o.extraCharges.push({label:"",amount:0});
+  updateOrder(o);renderForm();
+}
+function removeExtraCharge(i){
+  const o=getOrder();if(!o)return;
+  o.extraCharges.splice(i,1);
+  updateOrder(o);liveTotal();renderForm();
+}
+function updateExtraCharge(i,field,val){
+  const o=getOrder();if(!o)return;
+  o.extraCharges=o.extraCharges||[];
+  if(!o.extraCharges[i])return;
+  o.extraCharges[i][field]=field==="amount"?parseFloat(val)||0:val;
+  updateOrder(o);liveTotal();triggerAutoSave();
+}
+function setHsColourOther(val){const o=getOrder();if(!o)return;o.hsColour=val||"Other";o.hsColourAdj=parseFloat(document.getElementById("f-hs-colour-adj")?.value)||0;updateOrder(o);liveTotal();triggerAutoSave();}
+function setHsColourOtherAdj(val){const o=getOrder();if(!o)return;o.hsColourAdj=parseFloat(val)||0;updateOrder(o);liveTotal();triggerAutoSave();}
+function setInsColour(c){const o=getOrder();if(!o)return;o.inscriptionColour=c;updateOrder(o);renderForm();}
+function setStone(t){const o=getOrder();if(!o)return;o.stoneType=t==="None"?"":t;updateOrder(o);renderForm();}
+function toggleAcc(n){const o=getOrder();if(!o)return;o.accessories=o.accessories||[];o.accessories=o.accessories.includes(n)?o.accessories.filter(a=>a!==n):[...o.accessories,n];updateOrder(o);renderForm();}
+function setStatus(id){const o=getOrder();if(!o)return;o.status=id;updateOrder(o);renderForm();}
+function updateOrder(o){const idx=orders.findIndex(x=>String(x.id)===String(o.id));if(idx>=0)orders[idx]=o;localSave();}
+
+function onHsTypeChange(){
+  const o=getOrder();if(!o)return;
+  o.hsType=document.getElementById("f-hstype")?.value||"";o.hsSize="";
+  updateOrder(o);
+  const sel=document.getElementById("f-hssize");
+  if(sel){
+    const sizes=prices.headstones.filter(h=>h.type===o.hsType).map(h=>h.size);
+    sel.innerHTML=`<option value="">Select size…</option>`+sizes.map(s=>{const hs=prices.headstones.find(h=>h.type===o.hsType&&h.size===s);return `<option value="${esc(s)}">${esc(s)} — ${fmt(hs?.sell||0)}</option>`;}).join("");
+  }
+  liveTotal();
+}
+function onHsSizeChange(){
+  const o=getOrder();if(!o)return;
+  o.hsSize=document.getElementById("f-hssize")?.value||"";
+  updateOrder(o);liveTotal();
+}
+function onSurroundChange(){
+  const o=getOrder();if(!o)return;
+  o.surroundType=document.getElementById("f-surround")?.value||"";o.surroundGranite=false;
+  updateOrder(o);renderForm();
+}
+function onInsStyleChange(){
+  const o=getOrder();if(!o)return;
+  const sel=document.getElementById("f-ins-style");
+  if(!sel)return;
+  const style=(sel.value||"Standard").split(" — ")[0].trim();
+  const found=prices.inscription.find(i=>i.style===style);
+  if(found){const ppl=document.getElementById("f-ins-ppl");if(ppl)ppl.value=found.ppl;}
+  liveTotal();
+}
+function onInsTextChange(){
+  const o=getOrder();if(!o)return;
+  o.inscriptionText=document.getElementById("f-ins-text")?.value||"";
+  updateOrder(o);
+  const lc=document.getElementById("letter-counter");
+  if(lc)lc.innerHTML=renderLetterCounter(o.inscriptionText,o.inscriptionType||"new");
+  liveTotal();
+}
+
+// ── AUTO-SAVE ──
+let autoSaveTimer=null;
+function triggerAutoSave(){
+  clearTimeout(autoSaveTimer);
+  const ind=document.getElementById("autosave-indicator");
+  if(ind)ind.textContent="✎ Unsaved…";
+  autoSaveTimer=setTimeout(async()=>{
+    const o=getOrder();if(!o)return;
+    const get=id=>document.getElementById(id)?.value||"";
+    Object.assign(o,{
+      customerName:get("f-cname"),phone:get("f-phone"),email:get("f-email"),address:get("f-addr"),
+      deceasedName:get("f-dname"),deceasedDob:get("f-dob"),deceasedDod:get("f-dod"),orderDate:get("f-odate"),
+      hsType:get("f-hstype"),hsSize:get("f-hssize"),hsFinish:get("f-hs-finish"),
+      surroundType:get("f-surround"),
+      inscriptionText:get("f-ins-text"),
+      inscriptionLines:parseInt(get("f-ins-lines"))||0,
+      inscriptionStyle:(get("f-ins-style")||"Standard").split(" — ")[0].trim(),
+      inscriptionPpl:parseFloat(get("f-ins-ppl"))||35,
+      artworkNotes:get("f-art-notes"),
+      cemetery:get("f-cemetery"),graveNumber:get("f-grave-number"),
+      ownerName:get("f-owner-name"),ownerPhone:get("f-owner-phone"),
+      ownerAddress:get("f-owner-addr"),ownerEmail:get("f-owner-email"),
+      ownerRelationship:get("f-owner-rel"),
+      depositPaid:get("f-deposit"),paymentStatus:get("f-paystatus"),
+      proofDate:get("f-proof"),productionDate:get("f-prod"),installDate:get("f-install"),
+      notes:get("f-notes"),folderLink:get("f-folder-link"),
+    });
+    o.totalPrice=calcTotal(o);
+    o.cemeteryFee=o.cemetery?(prices.cemeteries.find(c=>c.name===o.cemetery)||{fee:0}).fee:0;
+    updateOrder(o);localSave();
+    if(ind)ind.textContent="⟳ Saving…";
+    await saveOrderToSheet(o);
+    if(ind){ind.textContent="✓ Saved";setTimeout(()=>{if(ind)ind.textContent="";},3000);}
+  },2000);
+}
+
+function liveTotal(){
+  const o=getOrder();if(!o)return;
+  o.hsType=document.getElementById("f-hstype")?.value||o.hsType;
+  o.hsSize=document.getElementById("f-hssize")?.value||o.hsSize;
+  o.surroundType=document.getElementById("f-surround")?.value||o.surroundType;
+  o.inscriptionLines=parseInt(document.getElementById("f-ins-lines")?.value)||0;
+  o.inscriptionPpl=parseFloat(document.getElementById("f-ins-ppl")?.value)||35;
+  o.cemetery=document.getElementById("f-cemetery")?.value||o.cemetery;
+  o.depositPaid=document.getElementById("f-deposit")?.value||"";
+  updateOrder(o);
+  const total=calcTotal(o);
+  const bal=Math.max(0,total-parseFloat(o.depositPaid||0));
+  const lt=v("live-total");const lb=v("live-bal");const ft=v("footer-total");
+  if(lt)lt.textContent=fmt(total);
+  if(lb){lb.textContent=fmt(bal);lb.style.color=bal>0?"#f97316":"#10b981";}
+  if(ft)ft.innerHTML=fmt(total)+(bal>0?` <span style="font-size:14px;color:#f97316;margin-left:10px">Bal: ${fmt(bal)}</span>`:"");
+}
+
+function renderLetterCounter(text,type){
+  const letters=countLetters(text);
+  const charge=calcLetterCharge(text,type);
+  if(type==="additional"){
+    const raw=letters*getAR();const isMin=raw<getAM();
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+      <span style="color:var(--muted)">${letters} letters × £${getAR()}${isMin?` — <span style="color:#f59e0b">minimum £${getAM()} applies</span>`:""}</span>
+      <span style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)">${fmt(charge)}</span></div>`;
+  }
+  const extra=Math.max(0,letters-getLF());
+  const barCol=letters<=getLF()?"#10b981":letters<=getLF()+20?"#f59e0b":"#ef4444";
+  return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+    <span style="color:var(--muted)">${letters} letters — ${letters<=getLF()?`<span style="color:#10b981">${getLF()-letters} free remaining</span>`:`<span style="color:#ef4444">${extra} extra @ £${getNR()}</span>`}</span>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold)">${fmt(charge)}</span></div>`;
+}
+
+// ── NOTES ──
+function addNote(){
+  const o=getOrder();if(!o)return;
+  const text=(v("log-text")?.value||"").trim();if(!text)return;
+  const author=(v("log-author")?.value||"Staff").trim();
+  o.log=o.log||[];o.log.push({id:uid(),ts:new Date().toISOString(),author,text});
+  updateOrder(o);renderForm();
+  setTimeout(()=>{const l=v("notes-log");if(l)l.scrollIntoView({behavior:"smooth",block:"nearest"});},100);
+}
+function deleteNote(idx){
+  const o=getOrder();if(!o)return;
+  if(!confirm("Delete note?"))return;
+  o.log.splice(idx,1);updateOrder(o);renderForm();
+}
+
+// ── FILE HANDLING — Google Drive via iframe POST ──
+function uploadFile(input, type){
+  const file=input.files[0];if(!file)return;
+  const o=getOrder();if(!o)return;
+  setSyncStatus("⟳ Reading file…","#f59e0b");
+
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    const base64=e.target.result.split(",")[1];
+    const dataUrl=e.target.result;
+
+    // Always store locally first so preview appears immediately
+    o.files=o.files||[];
+    o.files=o.files.filter(f=>f.type!==type);
+    o.files.push({type,name:file.name,url:dataUrl,uploadedAt:new Date().toISOString(),onDrive:false,pending:true});
+    updateOrder(o);localSave();
+    renderForm();
+    setSyncStatus("⟳ Uploading to Drive…","#f59e0b");
+
+    // Now try to upload to Drive
+    try{
+      const payload=JSON.stringify({
+        action:"uploadFile",
+        orderId:o.id,
+        customerName:o.customerName||"Unknown",
+        deceasedName:o.deceasedName||"Memorial",
+        fileName:file.name,
+        fileType:type,
+        fileData:base64,
+        mimeType:file.type||"application/octet-stream",
+      });
+
+      // Use fetch with no-cors as fire-and-forget, then poll for result via JSONP
+      // First try regular fetch
+      let uploaded=false;
+      try{
+        const res=await fetch(SCRIPT_URL,{method:"POST",body:payload,headers:{"Content-Type":"text/plain"}});
+        const text=await res.text();
+        const json=JSON.parse(text);
+        if(json.success){
+          const entry=o.files.find(f=>f.type===type);
+          if(entry){entry.url=json.viewUrl;entry.fileId=json.fileId;entry.onDrive=true;delete entry.pending;}
+          if(!o.folderLink&&json.folderUrl)o.folderLink=json.folderUrl;
+          updateOrder(o);localSave();
+          saveOrderToSheet(o);
+          setSyncStatus("✓ Uploaded to Google Drive","#10b981");
+          setTimeout(()=>setSyncStatus(""),3000);
+          renderForm();
+          uploaded=true;
+        }
+      }catch(fetchErr){
+        console.warn("Direct fetch blocked by CORS:",fetchErr.message);
+      }
+
+      if(!uploaded){
+        // Fire and forget with no-cors — file goes to Drive but we can't read response
+        fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",body:payload});
+        const entry=o.files.find(f=>f.type===type);
+        if(entry){entry.onDrive=true;delete entry.pending;}
+        updateOrder(o);localSave();
+        setSyncStatus("✓ Sent to Drive (preview stored locally)","#f59e0b");
+        setTimeout(()=>setSyncStatus(""),4000);
+        saveOrderToSheet(o);
+      }
+    }catch(err){
+      console.warn("Upload error:",err);
+      setSyncStatus("⚠ Preview saved locally only","#f97316");
+      setTimeout(()=>setSyncStatus(""),4000);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeFile(type){
+  const o=getOrder();if(!o)return;
+  const f=(o.files||[]).find(x=>x.type===type);
+  if(f&&f.fileId){
+    try{fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify({action:"deleteFile",fileId:f.fileId})});}
+    catch(e){console.warn("Drive delete failed:",e);}
+  }
+  o.files=(o.files||[]).filter(x=>x.type!==type);
+  updateOrder(o);localSave();
+  saveOrderToSheet(o);
+  renderForm();
+}
+
+// ── SAVE ORDER ──
+async function saveOrder(){
+  const o=getOrder();if(!o)return;
+  const get=id=>document.getElementById(id)?.value||"";
+  Object.assign(o,{
+    customerName:get("f-cname"),phone:get("f-phone"),email:get("f-email"),address:get("f-addr"),
+    deceasedName:get("f-dname"),deceasedDob:get("f-dob"),deceasedDod:get("f-dod"),orderDate:get("f-odate"),
+    hsType:get("f-hstype"),hsSize:get("f-hssize"),
+    hsFinish:get("f-hs-finish"),
+    surroundType:get("f-surround"),
+    inscriptionText:get("f-ins-text"),
+    inscriptionLines:parseInt(get("f-ins-lines"))||0,
+    inscriptionStyle:(get("f-ins-style")||"Standard").split(" — ")[0].trim(),
+    inscriptionPpl:parseFloat(get("f-ins-ppl"))||35,
+    artworkNotes:get("f-art-notes"),
+    cemetery:get("f-cemetery"),graveNumber:get("f-grave-number"),
+    ownerName:get("f-owner-name"),ownerPhone:get("f-owner-phone"),
+    ownerAddress:get("f-owner-addr"),ownerEmail:get("f-owner-email"),
+    ownerRelationship:get("f-owner-rel"),
+    depositPaid:get("f-deposit"),paymentStatus:get("f-paystatus"),
+    proofDate:get("f-proof"),productionDate:get("f-prod"),installDate:get("f-install"),
+    notes:get("f-notes"),folderLink:get("f-folder-link"),
+  });
+  o.totalPrice=calcTotal(o);
+  o.cemeteryFee=o.cemetery?(prices.cemeteries.find(c=>c.name===o.cemetery)||{fee:0}).fee:0;
+  updateOrder(o);localSave();closeForm();
+  saveOrderToSheet(o);
+}
+
+// ── FORM RENDER ──
+function sec(t){return `<div style="grid-column:span 2;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:#b89a5e;text-transform:uppercase;padding:14px 0 2px;border-bottom:1px solid #e2d9cc">${t}</div>`;}
+function fld(id,label,val,type="text",s2=false){
+  const span=s2?'grid-column:span 2;':''
+  return `<div style="${span}"><div style="font-size:10px;color:#7a7068;margin-bottom:4px">${label}</div><input id="${id}" type="${type}" value="${(val||"").replace(/"/g,"&quot;")}" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px"></div>`;
+}
+function sel(id,label,val,opts,s2=false){
+  const span=s2?'grid-column:span 2;':''
+  const options=opts.map(o=>{
+    const v=typeof o==="string"?o:o.value;
+    const l=typeof o==="string"?o:o.label;
+    return `<option value="${v}"${val===v?' selected':''}>${l}</option>`;
+  }).join("");
+  return `<div style="${span}"><div style="font-size:10px;color:#7a7068;margin-bottom:4px">${label}</div><select id="${id}" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">${options}</select></div>`;
+}
+function ta(id,label,val,s2=true){
+  const span=s2?'grid-column:span 2;':''
+  return `<div style="${span}"><div style="font-size:10px;color:#7a7068;margin-bottom:4px">${label}</div><textarea id="${id}" rows="3" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;resize:vertical">${(val||"").replace(/</g,"&lt;")}</textarea></div>`;
+}
+function toggle(label,isOn,fn,note=""){
+  return `<div style="grid-column:span 2"><div onclick="${fn}()" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 16px;background:${isOn?"#f0fdf4":"#f8f6f2"};border:2px solid ${isOn?"#10b981":"#e2d9cc"};border-radius:4px;user-select:none">
+    <div style="width:20px;height:20px;border:2px solid ${isOn?"#10b981":"#ccc"};border-radius:3px;background:${isOn?"#10b981":"#fff"};display:flex;align-items:center;justify-content:center;flex-shrink:0">${isOn?"<span style='color:#fff;font-size:13px'>✓</span>":""}</div>
+    <span style="font-size:13px;color:${isOn?"#10b981":"#7a7068"}">${label}${note?`<span style="font-size:11px;color:#7a7068;margin-left:6px">${note}</span>`:""}</span>
+  </div></div>`;
+}
+
+function renderForm(){
+  const o=getOrder();if(!o)return;
+  const g=document.getElementById.bind(document);
+  const total=calcTotal(o);
+  const bal=Math.max(0,total-parseFloat(o.depositPaid||0));
+  const hsTypes=[...new Set(prices.headstones.map(h=>h.type))];
+  const hsSizes=prices.headstones.filter(h=>h.type===o.hsType).map(h=>h.size);
+  const selHs=prices.headstones.find(h=>h.type===o.hsType&&h.size===o.hsSize);
+  // If type is set but no sizes found, prices may still be loading
+  const sizesLoading=o.hsType&&hsSizes.length===0&&prices.headstones.length===0;
+  const ref=(o.id||"").slice(-6).toUpperCase();
+  const fmt2=n=>"£"+Number(n||0).toLocaleString("en-GB",{minimumFractionDigits:2});
+
+  // Colour tiles
+  const stdColours=[{label:"Black",adj:0,note:"Stock"},{label:"SA Impala",adj:50,note:"+£50"},{label:"Bahamas",adj:0,note:"Stock"},{label:"Grey",adj:-50,note:"-£50"}];
+  const isOtherColour=o.hsColour&&!stdColours.find(c=>c.label===o.hsColour);
+  const colTiles=stdColours
+    .map(c=>`<div onclick="setHsColour('${c.label}',${c.adj})" style="padding:8px 14px;border:2px solid ${(o.hsColour||"")=== c.label?"#b89a5e":"#e2d9cc"};background:${(o.hsColour||"")=== c.label?"#fef3e2":"#f8f6f2"};border-radius:3px;cursor:pointer;font-size:12px;text-align:center;user-select:none">
+      <div style="font-weight:${(o.hsColour||"")=== c.label?500:300}">${c.label}</div>
+      <div style="font-size:10px;color:${c.adj>0?"#c2410c":c.adj<0?"#10b981":"#7a7068"}">${c.note}</div>
+    </div>`).join("")+
+    // Other colour option
+    `<div style="padding:8px 14px;border:2px solid ${isOtherColour?"#b89a5e":"#e2d9cc"};background:${isOtherColour?"#fef3e2":"#f8f6f2"};border-radius:3px;font-size:12px;text-align:center;min-width:120px">
+      <div style="font-weight:${isOtherColour?500:300};margin-bottom:4px">Other</div>
+      <input id="f-hs-colour-other" value="${isOtherColour?o.hsColour:""}" placeholder="Colour name" 
+        style="width:100%;padding:4px 6px;border:1px solid #e2d9cc;font-size:11px;border-radius:2px;text-align:center"
+        oninput="setHsColourOther(this.value)" onclick="event.stopPropagation()">
+      <div style="font-size:10px;color:#7a7068;margin-top:2px">
+        +£<input id="f-hs-colour-adj" value="${isOtherColour?Math.abs(o.hsColourAdj||0):""}" placeholder="0" 
+          style="width:40px;padding:2px 4px;border:1px solid #e2d9cc;font-size:10px;border-radius:2px;text-align:center"
+          oninput="setHsColourOtherAdj(this.value)" onclick="event.stopPropagation()">
+      </div>
+    </div>`;
+
+  // Inscription colour
+  const insColTiles=(["Silver","Gold","White"]).map(c=>{
+    const bg=c==="Silver"?"#c0c0c0":c==="Gold"?"#b89a5e":"#e8e8e8";
+    const on=(o.inscriptionColour||"Silver")===c;
+    return `<div onclick="setInsColour('${c}')" style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px solid ${on?bg:"#e2d9cc"};background:${on?bg+"22":"#f8f6f2"};border-radius:3px;cursor:pointer;user-select:none;font-size:12px">
+      <div style="width:12px;height:12px;border-radius:50%;background:${bg};border:1px solid #ccc"></div>${c}
+    </div>`;
+  }).join("");
+
+  // Stone tiles  
+  const stoneTiles=[{type:"None",standard:0,withSurround:0},...prices.stones].map(s=>{
+    const p=o.surroundType?s.withSurround:s.standard;
+    const on=(o.stoneType===s.type)||(s.type==="None"&&!o.stoneType);
+    return `<div onclick="setStone('${s.type}')" style="padding:8px 12px;border:2px solid ${on?"#b89a5e":"#e2d9cc"};background:${on?"#fef3e2":"#f8f6f2"};border-radius:3px;cursor:pointer;font-size:12px;user-select:none">
+      <div>${s.type}</div><div style="font-size:10px;color:#7a7068">${p>0?fmt2(p):"—"}</div>
+    </div>`;
+  }).join("");
+
+  // Accessory tiles
+  const accTiles=prices.accessories.map(a=>{
+    const on=(o.accessories||[]).includes(a.name);
+    return `<div onclick="toggleAcc('${a.name}')" style="padding:8px 12px;border:2px solid ${on?"#b89a5e":"#e2d9cc"};background:${on?"#fef3e2":"#f8f6f2"};border-radius:3px;cursor:pointer;font-size:12px;user-select:none">
+      <div>${a.name}</div><div style="font-size:10px;color:#7a7068">${fmt2(a.sell)}</div>
+    </div>`;
+  }).join("");
+
+  // Status buttons
+  const statusBtns=([
+    {id:"enquiry",label:"Enquiry",color:"#94a3b8"},{id:"quoted",label:"Quoted",color:"#f59e0b"},
+    {id:"confirmed",label:"Confirmed",color:"#3b82f6"},{id:"design",label:"In Design",color:"#8b5cf6"},
+    {id:"production",label:"Production",color:"#f97316"},{id:"ready",label:"Ready",color:"#10b981"},
+    {id:"installed",label:"Installed",color:"#059669"}
+  ]).map(s=>`<button onclick="setStatus('${s.id}')" style="padding:5px 10px;border:none;border-radius:2px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em;cursor:pointer;background:${o.status===s.id?s.color:"#e2d9cc"};color:${o.status===s.id?"#fff":"#7a7068"}">${s.label}</button>`).join("");
+
+  // Log
+  const logHtml=(o.log||[]).length===0
+    ?'<div style="font-size:12px;color:#7a7068;font-style:italic;padding:8px 0">No notes yet.</div>'
+    :(o.log||[]).slice().reverse().map((n,i)=>`<div style="background:#f8f6f2;border:1px solid #e2d9cc;border-radius:2px;padding:8px 10px;margin-bottom:6px;position:relative">
+      <div style="font-size:10px;color:#7a7068;margin-bottom:3px"><strong style="color:#1e2530">${n.author||"Staff"}</strong> · ${fmtTs(n.ts)}</div>
+      <div style="font-size:13px">${n.text}</div>
+      <button onclick="deleteNote(${o.log.length-1-i})" style="position:absolute;top:6px;right:6px;background:none;border:none;color:#ccc;cursor:pointer;font-size:11px">✕</button>
+    </div>`).join("");
+
+  const G="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px";
+  const fa=v("form-area");
+  fa.style.cssText="";
+
+  fa.innerHTML=`
+  <div style="background:#fff;border:1px solid #e2d9cc;border-radius:2px;margin-bottom:40px">
+    <!-- Header -->
+    <div style="background:#1e2530;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-family:'Cinzel',serif;font-size:13px;color:#b89a5e;letter-spacing:.08em">${o.customerName||"New Order"}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">${o.deceasedName?"For: "+o.deceasedName+" · ":""}Ref #${ref}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:'Cormorant Garamond',serif;font-size:20px;color:#b89a5e" id="live-total">${fmt2(total)}</span>
+        <span id="live-bal" style="font-size:12px;color:${bal>0?"#f97316":"#10b981"}">${bal>0?"Bal: "+fmt2(bal):total>0?"Paid ✓":""}</span>
+        <span id="autosave-indicator" style="font-size:11px;color:#94a3b8;font-style:italic"></span>
+        <button onclick="closeForm()" style="padding:6px 14px;background:#374151;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">← Back</button>
+      </div>
+    </div>
+
+    <!-- Customer -->
+    <div style="${G}">
+      ${sec("Customer Details")}
+      ${fld("f-cname","Customer Name",o.customerName)}
+      ${fld("f-phone","Phone",o.phone)}
+      ${fld("f-email","Email",o.email,"email")}
+      ${fld("f-addr","Address",o.address)}
+
+      ${sec("Deceased / Memorial")}
+      ${fld("f-dname","Name of Deceased",o.deceasedName)}
+      ${fld("f-odate","Order Date",o.orderDate,"date")}
+      ${fld("f-dob","Date of Birth",o.deceasedDob,"date")}
+      ${fld("f-dod","Date of Passing",o.deceasedDod,"date")}
+
+      ${sec("Headstone")}
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Type</div>
+        <select id="f-hstype" onchange="onHsTypeChange()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          <option value="">Select type…</option>
+          ${hsTypes.map(t=>`<option value="${t}"${o.hsType===t?" selected":""}>${t}</option>`).join("")}
+        </select>
+      </div>
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Size</div>
+        <select id="f-hssize" onchange="onHsSizeChange()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          <option value="">${sizesLoading?"⟳ Loading sizes…":o.hsType?"Select size…":"Pick type first"}</option>
+          ${hsSizes.map(s=>{const h=prices.headstones.find(x=>x.type===o.hsType&&x.size===s);return`<option value="${s}"${o.hsSize===s?" selected":""}>${s} — ${fmt2(h?.sell||0)}</option>`;}).join("")}
+        </select>
+      </div>
+      ${selHs?`<div style="grid-column:span 2;display:flex;gap:8px">
+        <div style="flex:1;background:#f8f6f2;border:1px solid #e2d9cc;padding:8px 12px;border-radius:2px;text-align:center"><div style="font-size:9px;color:#7a7068">SELL</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#8a6f3a">${fmt2(selHs.sell+(o.hsColourAdj||0))}</div></div>
+        <div style="flex:1;background:#f8f6f2;border:1px solid #e2d9cc;padding:8px 12px;border-radius:2px;text-align:center"><div style="font-size:9px;color:#7a7068">COST</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#7a7068">${fmt2(selHs.cost)}</div></div>
+        <div style="flex:1;background:#f8f6f2;border:1px solid #e2d9cc;padding:8px 12px;border-radius:2px;text-align:center"><div style="font-size:9px;color:#7a7068">MARGIN</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#10b981">${fmt2(selHs.sell-selHs.cost)}</div></div>
+      </div>`:""}
+
+      ${sec("Stone Colour")}
+      <div style="grid-column:span 2;display:flex;gap:8px;flex-wrap:wrap">${colTiles}</div>
+      ${sel("f-hs-finish","Finish",o.hsFinish||"",["","Polished","Honed","Flamed","Sandblasted","Natural"])}
+      <div></div>
+
+      ${sec("Surround")}
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Surround Type</div>
+        <select id="f-surround" onchange="onSurroundChange()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          <option value="">None</option>
+          ${prices.surrounds.map(s=>`<option value="${s.type}"${o.surroundType===s.type?" selected":""}>${s.type} — ${fmt2(s.sell)}</option>`).join("")}
+        </select>
+      </div>
+      ${o.surroundType?toggle(`6" Granite Upgrade (+${fmt2((prices.surrounds.find(s=>s.type===o.surroundType)||{}).graniteExtra||0)})`,o.surroundGranite,"toggleGranite"):"<div></div>"}
+
+      ${sec("Stones / Chippings")}
+      <div style="grid-column:span 2;display:flex;gap:8px;flex-wrap:wrap">${stoneTiles||'<div style="font-size:12px;color:#7a7068;font-style:italic">Loading…</div>'}</div>
+
+      ${sec("Accessories")}
+      <div style="grid-column:span 2;display:flex;gap:8px;flex-wrap:wrap">${accTiles||'<div style="font-size:12px;color:#7a7068;font-style:italic">Loading…</div>'}</div>
+
+      ${sec("Inscription")}
+      <div style="grid-column:span 2;display:flex;gap:8px">
+        ${["new","additional"].map(t=>{const on=(o.inscriptionType||"new")===t;const lbl=t==="new"?"New Inscription":"Additional on Existing";const sub=t==="new"?`First ${getLF()} letters free, then £${getNR()}/letter`:`£${getAR()}/letter, min £${fmt2(getAM())}`;return`<div onclick="setInsType('${t}')" style="flex:1;display:flex;align-items:center;gap:10px;padding:12px;border:2px solid ${on?"#b89a5e":"#e2d9cc"};background:${on?"#fef3e2":"#f8f6f2"};border-radius:4px;cursor:pointer;user-select:none">
+          <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${on?"#8a6f3a":"#ccc"};background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0">${on?'<div style="width:9px;height:9px;border-radius:50%;background:#8a6f3a"></div>':""}</div>
+          <div><div style="font-size:13px;font-weight:500">${lbl}</div><div style="font-size:11px;color:#7a7068">${sub}</div></div>
+        </div>`;}).join("")}
+      </div>
+      ${ta("f-ins-text","Inscription Text",o.inscriptionText)}
+      <div style="grid-column:span 2;padding:8px 12px;background:#f8f6f2;border:1px solid #e2d9cc;border-radius:2px;font-size:11px" id="letter-counter">
+        ${renderLetterCounter(o.inscriptionText,o.inscriptionType||"new")}
+      </div>
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Number of Lines</div>
+        <select id="f-ins-lines" onchange="liveTotal()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          ${[0,1,2,3,4,5,6,7,8].map(n=>`<option value="${n}"${o.inscriptionLines===n?" selected":""}>${n} line${n!==1?"s":""} (+${fmt2(n*(o.inscriptionPpl||35))})</option>`).join("")}
+        </select>
+      </div>
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Letter Style</div>
+        <select id="f-ins-style" onchange="onInsStyleChange()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          ${(prices.inscription.length?prices.inscription:[{style:"Standard",ppl:35},{style:"Serif",ppl:35},{style:"Script",ppl:40},{style:"Block",ppl:35},{style:"Gold Leaf",ppl:55}]).map(i=>`<option value="${i.style}"${o.inscriptionStyle===i.style?" selected":""}>${i.style}${i.ppl?" — "+fmt2(i.ppl):""}</option>`).join("")}
+        </select>
+      </div>
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Price Per Line (£)</div>
+        <input id="f-ins-ppl" type="number" value="${o.inscriptionPpl||35}" oninput="liveTotal()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px">
+      </div>
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Inscription Colour</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${insColTiles}</div>
+      </div>
+
+      ${sec("Cemetery / Planning")}
+      <div><div style="font-size:10px;color:#7a7068;margin-bottom:4px">Cemetery / Location</div>
+        <select id="f-cemetery" onchange="liveTotal()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+          <option value="">None</option>
+          ${prices.cemeteries.map(c=>`<option value="${c.name}"${o.cemetery===c.name?" selected":""}>${c.name}${c.fee>0?" — "+fmt2(c.fee):" — No fee"}</option>`).join("")}
+        </select>
+      </div>
+      ${fld("f-grave-number","Grave Number / Plot Ref",o.graveNumber)}
+
+      ${sec("Grave Owner Details")}
+      ${fld("f-owner-name","Grave Owner Name",o.ownerName)}
+      ${fld("f-owner-phone","Owner Phone",o.ownerPhone)}
+      ${fld("f-owner-addr","Owner Address",o.ownerAddress)}
+      ${fld("f-owner-email","Owner Email",o.ownerEmail,"email")}
+      ${sel("f-owner-rel","Relationship to Deceased",o.ownerRelationship||"",["","Spouse / Partner","Son / Daughter","Parent","Sibling","Other Family","Friend","Solicitor / Estate"],true)}
+
+      ${sec("Artwork & Proof")}
+      ${ta("f-art-notes","Artwork / Design Notes",o.artworkNotes)}
+      ${fld("f-proof","Proof Date",o.proofDate,"date")}
+      ${toggle(o.artworkApproved?"✓ Proof approved by customer":"Awaiting proof approval",o.artworkApproved,"toggleArtApproved")}
+
+      ${sec("Additional Charges")}
+      <div style="grid-column:span 2">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:10px;color:#7a7068">Add any extra charges not covered above (e.g. engraving extras, delivery, special requests)</div>
+          <button onclick="addExtraCharge()" style="padding:4px 12px;background:#8a6f3a;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;border-radius:2px;white-space:nowrap;margin-left:10px">+ Add Charge</button>
+        </div>
+        <div id="extra-charges-list">
+          ${(o.extraCharges||[]).length===0
+            ?'<div style="font-size:12px;color:#7a7068;font-style:italic;padding:8px 0">No additional charges.</div>'
+            :(o.extraCharges||[]).map((c,i)=>`
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+                <input value="${c.label||""}" placeholder="Description" oninput="updateExtraCharge(${i},'label',this.value)" style="flex:1;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px">
+                <input type="number" value="${c.amount||""}" placeholder="£0.00" oninput="updateExtraCharge(${i},'amount',this.value)" style="width:110px;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;text-align:right">
+                <button onclick="removeExtraCharge(${i})" style="padding:8px 10px;background:none;border:1px solid #e2d9cc;border-radius:2px;cursor:pointer;color:#7a7068;font-size:12px">✕</button>
+              </div>`).join("")
+          }
+        </div>
+        ${(o.extraCharges||[]).length>0?`<div style="text-align:right;font-size:12px;color:#7a7068;margin-top:4px">Extra charges total: <strong style="color:#8a6f3a">${fmt2((o.extraCharges||[]).reduce((s,c)=>s+(parseFloat(c.amount)||0),0))}</strong></div>`:""}
+      </div>
+
+      ${sec("Payment")}
+      <div style="grid-column:span 2;background:#f8f6f2;border:1px solid #e2d9cc;border-radius:2px;padding:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:10px;color:#7a7068;margin-bottom:3px">Total</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:#8a6f3a" id="live-total2">${fmt2(total)}</div></div>
+          <div><div style="font-size:10px;color:#7a7068;margin-bottom:3px">Deposit Paid (£)</div><input id="f-deposit" type="number" value="${o.depositPaid||""}" placeholder="0.00" oninput="liveTotal()" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px"></div>
+          <div><div style="font-size:10px;color:#7a7068;margin-bottom:3px">Balance Due</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:${bal>0?"#f97316":"#10b981"}" id="live-bal2">${fmt2(bal)}</div></div>
+          <div><div style="font-size:10px;color:#7a7068;margin-bottom:3px">Payment Status</div>
+            <select id="f-paystatus" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;background:#fff">
+              ${["Unpaid","Deposit Paid","Part Paid","Paid in Full"].map(p=>`<option${(o.paymentStatus||"Unpaid")===p?" selected":""}>${p}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      ${sec("Schedule & Status")}
+      ${fld("f-prod","Production Start",o.productionDate,"date")}
+      ${fld("f-install","Installation Date",o.installDate,"date")}
+      <div style="grid-column:span 2"><div style="font-size:10px;color:#7a7068;margin-bottom:6px">Order Status</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${statusBtns}</div>
+      </div>
+      ${ta("f-notes","General Notes",o.notes)}
+
+      ${sec("Activity Log")}
+      <div style="grid-column:span 2">
+        <div id="notes-log">${logHtml}</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px">
+          <div style="flex:1">
+            <input id="log-author" placeholder="Your name" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;margin-bottom:6px">
+            <textarea id="log-text" rows="2" placeholder="Add a note…" style="width:100%;padding:8px 10px;border:1px solid #e2d9cc;font-family:'Jost',sans-serif;font-size:13px;border-radius:2px;resize:vertical"></textarea>
+          </div>
+          <button onclick="addNote()" style="padding:8px 14px;background:#8a6f3a;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px;white-space:nowrap;align-self:flex-end">Add Note</button>
+        </div>
+      </div>
+
+      ${sec("Files & Documents")}
+      <div style="grid-column:span 2">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;margin-bottom:12px">
+          ${[
+            {type:"Proof / Design",    icon:"🎨", desc:"Design artwork & proof"},
+            {type:"Customer Photo",    icon:"📷", desc:"Photo for engraving"},
+            {type:"Signed Approval",   icon:"✅", desc:"Signed proof approval"},
+            {type:"Supplier Invoice",  icon:"🧾", desc:"Supplier cost invoice"},
+            {type:"Cemetery Permit",   icon:"⛪", desc:"Faculty / permit form"},
+          ].map(({type,icon,desc})=>{
+            const stored=(o.files||[]).find(f=>f.type===type);
+            const isImg=stored&&/\.(jpg|jpeg|png|gif|webp)/i.test(stored.name||"");
+            const isPdf=stored&&/\.pdf$/i.test(stored.name||"");
+            const ext=stored?stored.name.split(".").pop().toUpperCase():"";
+            return `<div style="background:#fff;border:1px solid ${stored?"#b89a5e":"#e2d9cc"};border-radius:6px;overflow:hidden;transition:all .2s">
+              <!-- File type header -->
+              <div style="background:${stored?"#fef3e2":"#f8f6f2"};padding:8px 10px;border-bottom:1px solid ${stored?"#e8d5b0":"#e2d9cc"};display:flex;align-items:center;gap:6px">
+                <span style="font-size:14px">${icon}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:9px;font-family:'Cinzel',serif;letter-spacing:.08em;color:${stored?"#8a6f3a":"#7a7068"};text-transform:uppercase;font-weight:${stored?600:400}">${type}</div>
+                  <div style="font-size:9px;color:#94a3b8;margin-top:1px">${desc}</div>
+                </div>
+                ${stored?`<span style="font-size:9px;background:${stored.onDrive?"#10b981":"#f59e0b"};color:#fff;padding:2px 6px;border-radius:10px;font-family:'Cinzel',serif;white-space:nowrap">${stored.onDrive?"✓ On Drive":"⚠ Local only"}</span>`:''}
+              </div>
+              <!-- Preview area -->
+              <div style="height:80px;display:flex;align-items:center;justify-content:center;background:${stored?"#fff":"#fafafa"}">
+                ${stored
+                  ? isImg
+                    ? `<img src="${stored.url}" style="max-height:76px;max-width:100%;object-fit:contain;padding:4px" onerror="this.style.display='none'">`
+                    : `<div style="text-align:center;padding:8px">
+                        <div style="font-size:28px">${isPdf?"📄":"📎"}</div>
+                        <div style="font-size:10px;font-weight:600;color:#8a6f3a;margin-top:2px">${ext}</div>
+                      </div>`
+                  : `<div style="text-align:center;color:#cbd5e1">
+                      <div style="font-size:28px;margin-bottom:4px">📂</div>
+                      <div style="font-size:9px">No file yet</div>
+                    </div>`
+                }
+              </div>
+              <!-- File name & actions -->
+              <div style="padding:8px 10px;border-top:1px solid #f0ebe4">
+                ${stored
+                  ? `<div style="font-size:11px;color:#1e2530;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;font-weight:500" title="${stored.name}">
+                      ${stored.name}
+                    </div>
+                    <div style="display:flex;gap:4px">
+                      <a href="${stored.url}" target="_blank" style="flex:1;padding:5px 8px;background:#8a6f3a;color:#fff;border-radius:3px;font-size:10px;text-decoration:none;text-align:center;font-family:'Cinzel',serif;letter-spacing:.05em">View</a>
+                      <button onclick="removeFile('${type}')" style="padding:5px 8px;background:#f8f6f2;border:1px solid #e2d9cc;border-radius:3px;font-size:10px;cursor:pointer;color:#ef4444" title="Remove">✕</button>
+                    </div>`
+                  : `<label style="cursor:pointer;display:block">
+                      <input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="uploadFile(this,'${type}')">
+                      <span style="display:block;padding:6px 10px;background:#f8f6f2;border:1px solid #e2d9cc;border-radius:3px;font-size:10px;color:#7a7068;text-align:center;font-family:'Cinzel',serif;letter-spacing:.05em;cursor:pointer">
+                        + Upload File
+                      </span>
+                    </label>`
+                }
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+        <!-- Drive folder link -->
+        <div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📁</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-family:'Cinzel',serif;letter-spacing:.08em;color:#1d4ed8;margin-bottom:4px">GOOGLE DRIVE FOLDER</div>
+            <input id="f-folder-link" value="${o.folderLink||""}" placeholder="Folder link appears here after first upload, or paste manually…" style="width:100%;padding:6px 8px;border:1px solid #bfdbfe;font-family:'Jost',sans-serif;font-size:12px;border-radius:3px;background:#fff;color:#1e2530">
+          </div>
+          ${o.folderLink?`<a href="${o.folderLink}" target="_blank" style="padding:8px 14px;background:#1d4ed8;color:#fff;border-radius:4px;font-size:10px;text-decoration:none;white-space:nowrap;font-family:'Cinzel',serif;letter-spacing:.05em">Open Folder →</a>`:""}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost vs Sell Summary -->
+    <div style="padding:16px 20px;border-top:1px solid #e2d9cc;background:#f8f6f2">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:#7a7068;text-transform:uppercase;margin-bottom:10px">Cost vs Sell Summary</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        ${(()=>{
+          const rows=[];
+          const hs=prices.headstones.find(h=>h.type===o.hsType&&h.size===o.hsSize);
+          if(hs){
+            const sell=hs.sell+(o.hsColourAdj||0);
+            rows.push([`Headstone — ${o.hsType} ${o.hsSize}${o.hsColour?" ("+o.hsColour+")":""}`,sell,hs.cost]);
+          }
+          if(o.surroundType){
+            const s=prices.surrounds.find(x=>x.type===o.surroundType);
+            if(s){
+              rows.push([`Surround — ${o.surroundType}`,s.sell,s.cost]);
+              if(o.surroundGranite) rows.push([`6" Granite Upgrade`,s.graniteExtra,Math.round(s.graniteExtra*0.75)]);
+            }
+          }
+          if(o.stoneType){
+            const st=prices.stones.find(x=>x.type===o.stoneType);
+            if(st){const p=o.surroundType?st.withSurround:st.standard;rows.push([`Stones — ${o.stoneType}`,p,Math.round(p*0.6)]);}
+          }
+          (o.accessories||[]).forEach(n=>{
+            const a=prices.accessories.find(x=>x.name===n);
+            if(a) rows.push([n,a.sell,a.cost]);
+          });
+          if(o.cemetery){
+            const c=prices.cemeteries.find(x=>x.name===o.cemetery);
+            if(c&&c.fee>0) rows.push([`Cemetery — ${o.cemetery}`,c.fee,c.fee]);
+          }
+          const insCharge=calcLetterCharge(o.inscriptionText||"",o.inscriptionType||"new");
+          const insLines=(o.inscriptionLines||0)*(o.inscriptionPpl||35);
+          const insTotal=insCharge+insLines;
+          if(insTotal>0){
+            const insStyle=prices.inscription.find(i=>i.style===o.inscriptionStyle);
+            const insCost=insStyle?countLetters(o.inscriptionText||"")*insStyle.costPerLetter:Math.round(insTotal*0.5);
+            rows.push([`Inscription — ${o.inscriptionStyle||"Standard"}`,insTotal,insCost]);
+          }
+          (o.extraCharges||[]).forEach(c=>{if(c.label&&c.amount)rows.push([c.label,parseFloat(c.amount)||0,0]);});
+          if(rows.length===0) return '<div style="font-size:12px;color:#7a7068;font-style:italic">Add headstone details to see cost breakdown.</div>';
+          const totalSell=rows.reduce((s,r)=>s+r[1],0);
+          const totalCost=rows.reduce((s,r)=>s+r[2],0);
+          const margin=totalSell-totalCost;
+          const marginPct=totalSell>0?Math.round((margin/totalSell)*100):0;
+          return rows.map(([label,sell,cost])=>{
+            const m=sell-cost;const mp=sell>0?Math.round((m/sell)*100):0;
+            return `<div style="background:#fff;border:1px solid #e2d9cc;border-radius:3px;padding:10px 12px">
+              <div style="font-size:10px;color:#7a7068;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${label}">${label}</div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span style="color:#7a7068">Sell</span><span style="color:#8a6f3a;font-family:'Cormorant Garamond',serif;font-size:14px">${fmt2(sell)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span style="color:#7a7068">Cost</span><span style="color:#7a7068;font-family:'Cormorant Garamond',serif;font-size:14px">${fmt2(cost)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;padding-top:4px;border-top:1px solid #f0ebe4">
+                <span style="color:#7a7068">Margin</span>
+                <span style="font-family:'Cormorant Garamond',serif;font-size:14px;color:${mp>=20?"#10b981":mp>=10?"#f59e0b":"#ef4444"}">${fmt2(m)} (${mp}%)</span>
+              </div>
+            </div>`;
+          }).join("")+
+          `<div style="background:#1e2530;border-radius:3px;padding:10px 12px">
+            <div style="font-size:10px;color:#b89a5e;margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:.08em">TOTAL</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+              <span style="color:#94a3b8">Sell</span><span style="color:#b89a5e;font-family:'Cormorant Garamond',serif;font-size:14px">${fmt2(totalSell)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+              <span style="color:#94a3b8">Cost</span><span style="color:#94a3b8;font-family:'Cormorant Garamond',serif;font-size:14px">${fmt2(totalCost)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;padding-top:4px;border-top:1px solid #374151">
+              <span style="color:#94a3b8">Margin</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-size:14px;color:${marginPct>=20?"#10b981":marginPct>=10?"#f59e0b":"#ef4444"}">${fmt2(margin)} (${marginPct}%)</span>
+            </div>
+          </div>`;
+        })()}
+      </div>
+    </div>
+
+    <!-- PDF Buttons -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid #e2d9cc;background:#f8f6f2">
+      <button onclick="genEstimate()" style="padding:6px 14px;background:#1d4ed8;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">⬇ Estimate</button>
+      <button onclick="genInvoice()" style="padding:6px 14px;background:#15803d;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">⬇ Invoice</button>
+      <button onclick="genJobCard()" style="padding:6px 14px;background:#7c3aed;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">⬇ Job Card</button>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8f6f2;border-top:1px solid #e2d9cc;padding:14px 20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:#8a6f3a" id="footer-total">${fmt2(total)}${bal>0?`<span style="font-size:14px;color:#f97316;margin-left:10px">Bal: ${fmt2(bal)}</span>`:""}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeForm()" style="padding:8px 16px;background:#1e2530;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">Cancel</button>
+        <button onclick="saveOrder()" style="padding:8px 16px;background:#8a6f3a;color:#fff;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;border-radius:2px">Save Order</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Attach textarea oninput after render
+  const insTA=document.getElementById("f-ins-text");
+  if(insTA)insTA.oninput=onInsTextChange;
+  // Wire auto-save to all inputs, selects and textareas in the form
+  document.querySelectorAll("#form-area input, #form-area select, #form-area textarea").forEach(el=>{
+    const orig=el.oninput;
+    el.addEventListener("input",triggerAutoSave);
+    el.addEventListener("change",triggerAutoSave);
+  });
+}
+// ── PRICES TAB ──
+function renderPrices(){
+  const tbl=(title,cols,rows,widths)=>{
+    if(!rows.length)return`<div class="price-section"><div class="price-sec-title">${title}</div><p style="font-size:12px;color:var(--muted);padding:8px 0;font-style:italic">No data.</p></div>`;
+    const colDefs=widths?widths.map((w,i)=>`<col style="width:${w}">`).join(""):"";
+    return`<div class="price-section"><div class="price-sec-title">${title} <span style="font-size:9px;color:var(--muted);font-weight:300">(${rows.length})</span></div>
+    <table><colgroup>${colDefs}</colgroup>
+    <thead><tr>${cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i>0?' class="num"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  };
+  v("price-tables").innerHTML=
+    tbl("🪨 Headstones",["Type","Size","Sell","Cost","Margin"],
+      prices.headstones.map(h=>[h.type,h.size,fmt(h.sell),fmt(h.cost),fmt(h.sell-h.cost)]),
+      ["15%","35%","17%","17%","16%"])+
+    tbl("🔲 Surrounds",["Type","Sell","6\" Granite Extra","Cost"],
+      prices.surrounds.map(s=>[s.type,fmt(s.sell),fmt(s.graniteExtra),fmt(s.cost)]),
+      ["40%","20%","20%","20%"])+
+    tbl("🔲 Stones / Chippings",["Type","Standard Price","With Surround"],
+      prices.stones.map(s=>[s.type,fmt(s.standard),fmt(s.withSurround)]),
+      ["50%","25%","25%"])+
+    tbl("🎁 Accessories",["Item","Size","Sell","Cost","Margin"],
+      prices.accessories.map(a=>[a.name,a.size||"—",fmt(a.sell),fmt(a.cost),fmt(a.sell-a.cost)]),
+      ["30%","20%","17%","17%","16%"])+
+    tbl("⛪ Cemetery Fees",["Location","Fee","Notes"],
+      prices.cemeteries.map(c=>[c.name,fmt(c.fee),c.notes||"—"]),
+      ["25%","15%","60%"])+
+    `<div class="price-section"><div class="price-sec-title">✍️ New Inscriptions <span style="font-size:9px;color:var(--muted);font-weight:300">(first ${getLF()} letters free, then £${getNR()}/letter)</span></div>
+    <table><colgroup><col style="width:40%"><col style="width:20%"><col style="width:20%"><col style="width:20%"></colgroup>
+    <thead><tr><th>Style</th><th>Cost/Letter</th><th>Sell/Letter</th><th>Margin/Letter</th></tr></thead><tbody>
+    ${prices.newIns.styles.map(s=>`<tr><td>${s.style}</td><td class="num">${fmt(s.costPerLetter)}</td><td class="num">${fmt(s.sellPerLetter)}</td><td class="num">${fmt(s.sellPerLetter-s.costPerLetter)}</td></tr>`).join("")}
+    </tbody></table></div>`+
+    `<div class="price-section"><div class="price-sec-title">➕ Additional Inscriptions <span style="font-size:9px;color:var(--muted);font-weight:300">(£${getAR()}/letter, min £${fmt(getAM())})</span></div>
+    <table><colgroup><col style="width:40%"><col style="width:20%"><col style="width:20%"><col style="width:20%"></colgroup>
+    <thead><tr><th>Style</th><th>Cost/Letter</th><th>Sell/Letter</th><th>Min Charge</th></tr></thead><tbody>
+    ${prices.addIns.styles.map(s=>`<tr><td>${s.style}</td><td class="num">${fmt(s.costPerLetter)}</td><td class="num">${fmt(s.sellPerLetter)}</td><td class="num">${fmt(getAM())}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
+
+// ── PDF HELPERS ──
+function pdfLogo(doc){
+  const cx=105;
+  // DAVID CRYMBLE & Sons — stacked bold serif style matching headed paper
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(26);doc.setTextColor(10,10,10);
+  doc.text("DAVID",cx,13,"center");
+  doc.setFontSize(30);
+  doc.text("CRYMBLE",cx,23,"center");
+  doc.setFontSize(18);doc.setFont("helvetica","normal");
+  doc.text("& Sons",cx,31,"center");
+  // Spaced subtitle
+  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(40,40,40);
+  doc.setCharSpace(3.5);
+  doc.text("FUNERAL  DIRECTORS",cx,37,"center");
+  doc.text("&  MEMORIAL  MASONS",cx,42,"center");
+  doc.setCharSpace(0);
+  // Thin rule below header
+  doc.setDrawColor(160,160,160);doc.setLineWidth(0.25);
+  doc.line(40,46,170,46);
+}
+function pdfRef(doc,ref){
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);
+  doc.setTextColor(60,60,60);
+  doc.text("Our Reference: "+ref,196,14,"right");
+  doc.text(new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}),196,19,"right");
+}
+function pdfSecHdr(doc,title,y){
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text(title,14,y);doc.setDrawColor(20,20,20);doc.setLineWidth(0.4);
+  doc.line(14,y+1.5,14+doc.getTextWidth(title),y+1.5);return y+9;
+}
+function pdfItem(doc,label,amount,y){
+  doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(30,30,30);
+  doc.text(label,14,y);
+  if(amount!==null&&amount!==undefined)doc.text(fmt(amount),196,y,"right");
+  return y+6;
+}
+function pdfFooter(doc){
+  const H=doc.internal.pageSize.height;
+  const W=doc.internal.pageSize.width;
+  // Top rule of footer
+  doc.setDrawColor(160,160,160);doc.setLineWidth(0.25);doc.line(14,H-34,196,H-34);
+  // Three column footer matching headed paper
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(60,60,60);
+  // Left col — contact
+  doc.text("T. 028 9066 7784",14,H-28);
+  doc.text("E. info@Crymbleandsons.com",14,H-23.5);
+  doc.text("Crymbleandsons.com",14,H-19);
+  // Centre col — addresses
+  doc.text("139 Upper Lisburn Road, Belfast, BT10 0LH",W/2,H-28,"center");
+  doc.text("330-332 Woodstock Road, Belfast, BT6 9DP",W/2,H-23.5,"center");
+  // Right col — company
+  doc.setFont("helvetica","bold");doc.setFontSize(7.5);
+  doc.text("AN INDEPENDENT",176,H-28,"right");
+  doc.text("FAMILY COMPANY",176,H-23.5,"right");
+  doc.setFont("helvetica","normal");
+  doc.text("David, Joy & Andrew Crymble",176,H-19,"right");
+  // Scripture — centred, italic
+  doc.setFont("helvetica","italic");doc.setFontSize(9);doc.setTextColor(30,30,30);
+  doc.text("'Our God will take care of everything you need.'  Phil 4:19",W/2,H-11,"center");
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(100,100,100);
+  doc.text("View our terms of business at www.dcfs.co.uk/payments",W/2,H-6,"center");
+}
+function getLineItems(o){
+  const items=[];
+  const hs=prices.headstones.find(h=>h.type===o.hsType&&h.size===o.hsSize);
+  if(hs){let l=`${o.hsType} ${o.hsSize}`;if(o.hsColour)l+=` — ${o.hsColour}`;if(o.hsFinish)l+=`, ${o.hsFinish}`;items.push([l,hs.sell+(o.hsColourAdj||0)]);}
+  if(o.surroundType){const s=prices.surrounds.find(x=>x.type===o.surroundType);if(s){items.push([`Surround — ${o.surroundType}`,s.sell]);if(o.surroundGranite)items.push([`6" Granite Upgrade`,s.graniteExtra]);}}
+  if(o.stoneType){const st=prices.stones.find(x=>x.type===o.stoneType);if(st)items.push([`Stones / Chippings — ${o.stoneType}`,o.surroundType?st.withSurround:st.standard]);}
+  (o.accessories||[]).forEach(n=>{const a=prices.accessories.find(x=>x.name===n);if(a)items.push([`${n}${a.size?" ("+a.size+")":""}`,a.sell]);});
+  if(o.cemetery){const c=prices.cemeteries.find(x=>x.name===o.cemetery);if(c&&c.fee>0)items.push([`Cemetery / Planning Fee — ${o.cemetery}`,c.fee]);}
+  const insType=o.inscriptionType||"new";
+  if(insType==="additional"){const lt=countLetters(o.inscriptionText);const ch=calcLetterCharge(o.inscriptionText,"additional");const isMin=lt*getAR()<getAM();items.push([`Additional Inscription — ${o.inscriptionStyle||"Standard"}, ${o.inscriptionColour||"Silver"}, ${lt} letter${lt!==1?"s":""}${isMin?" (min charge)":""}`,ch]);}
+  else{const lt=countLetters(o.inscriptionText);const ex=Math.max(0,lt-getLF());const ch=(o.inscriptionLines||0)*(o.inscriptionPpl||35)+(ex>0?ex*getNR():0);if(ch>0||lt>0){let l=`Inscription — ${o.inscriptionStyle||"Standard"}, ${o.inscriptionColour||"Silver"}`;if(o.inscriptionLines>0)l+=`, ${o.inscriptionLines} line${o.inscriptionLines!==1?"s":""}`;if(lt>0)l+=` (${lt} letters)`;if(ch>0)items.push([l,ch]);}}
+  // Extra charges
+  (o.extraCharges||[]).forEach(c=>{
+    if(c.label&&c.amount) items.push([c.label, parseFloat(c.amount)||0]);
+  });
+  return items;
+}
+
+// ── SAVE PDF TO GOOGLE DRIVE ──
+async function savePdfToDrive(doc, fileName, fileType){
+  const o=getOrder();if(!o)return;
+  try{
+    // Get PDF as base64
+    const pdfBlob=doc.output("datauristring");
+    const base64=pdfBlob.split(",")[1];
+    const payload=JSON.stringify({
+      action:"uploadFile",
+      orderId:o.id,
+      customerName:o.customerName||"Unknown",
+      deceasedName:o.deceasedName||"Memorial",
+      fileName:fileName,
+      fileType:fileType,
+      fileData:base64,
+      mimeType:"application/pdf",
+    });
+    // Try direct fetch first
+    try{
+      const res=await fetch(SCRIPT_URL,{method:"POST",body:payload,headers:{"Content-Type":"text/plain"}});
+      const text=await res.text();
+      const json=JSON.parse(text);
+      if(json.success){
+        // Update folder link if not set
+        if(!o.folderLink&&json.folderUrl){
+          o.folderLink=json.folderUrl;
+          updateOrder(o);localSave();
+          // Update folder link input if visible
+          const fl=document.getElementById("f-folder-link");
+          if(fl)fl.value=json.folderUrl;
+        }
+        setSyncStatus("✓ PDF saved to Drive","#10b981");
+        setTimeout(()=>setSyncStatus(""),3000);
+        return;
+      }
+    }catch(e){
+      console.warn("Direct fetch failed for PDF upload, trying no-cors");
+    }
+    // Fallback: fire and forget
+    fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",body:payload});
+    setSyncStatus("✓ PDF sent to Drive","#f59e0b");
+    setTimeout(()=>setSyncStatus(""),3000);
+  }catch(err){
+    console.warn("PDF Drive upload failed:",err);
+  }
+}
+
+function genEstimate(){
+  const o=getOrder();if(!o)return;
+  const{jsPDF}=window.jspdf;const doc=new jsPDF();const ref="EST-"+o.id.slice(-6).toUpperCase();
+  pdfLogo(doc);pdfRef(doc,ref);let y=54;
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text(o.customerName?"Dear "+o.customerName+",":"Dear Sir / Madam,",14,y);y+=8;
+  const intro=doc.splitTextToSize(`We have pleasure in submitting the following estimate for a memorial for the late ${o.deceasedName||"your loved one"}.\nIf you have any questions or require any guidance, please do not hesitate to contact us.`,182);
+  doc.setFontSize(9.5);doc.text(intro,14,y);y+=intro.length*5+8;
+  y=pdfSecHdr(doc,"Memorial Specification",y);
+  getLineItems(o).forEach(([l,a])=>{if(y>252){doc.addPage();pdfFooter(doc);y=20;}y=pdfItem(doc,l,a,y);});
+  y+=3;doc.setDrawColor(180,180,180);doc.setLineWidth(0.3);doc.line(14,y,196,y);y+=6;
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("Total Estimate",130,y,"right");doc.text(fmt(o.totalPrice),196,y,"right");
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.4);doc.line(120,y+1.5,196,y+1.5);doc.line(120,y+3,196,y+3);y+=14;
+  if(y>225){doc.addPage();pdfFooter(doc);y=20;}
+  y=pdfSecHdr(doc,"Terms & Conditions",y);
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(60,60,60);
+  ["This estimate is valid for 30 days from the date of issue.",
+   "A deposit of 50% is required to confirm your order and begin production.",
+   "The balance is due prior to installation.",
+   "Cemetery fees, faculty fees and permissions are not included unless stated above.",
+   "If a bank or solicitor is acting on your behalf, then please advise us."
+  ].forEach(t=>{if(y>265){doc.addPage();pdfFooter(doc);y=20;}doc.text("• "+t,16,y);y+=5;});
+  y+=8;if(y>240){doc.addPage();pdfFooter(doc);y=20;}
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text("Yours sincerely",14,y);y+=20;doc.text("David Crymble & Sons",14,y);
+  const estFileName="Estimate-"+ref+"-"+(o.customerName||"Customer").replace(/\s+/g,"-")+".pdf";
+  pdfFooter(doc);
+  doc.save(estFileName);
+  savePdfToDrive(doc, estFileName, "Estimate");
+}
+
+function genInvoice(){
+  const o=getOrder();if(!o)return;
+  const{jsPDF}=window.jspdf;const doc=new jsPDF();const ref="INV-"+o.id.slice(-6).toUpperCase();
+  pdfLogo(doc);pdfRef(doc,ref);let y=54;
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text(o.customerName?"Dear "+o.customerName+",":"Dear Sir / Madam,",14,y);y+=8;
+  const intro=doc.splitTextToSize(`We have included below the account for the memorial for the late ${o.deceasedName||"your loved one"}.\nIf you need any guidance, we are here for you.`,182);
+  doc.setFontSize(9.5);doc.text(intro,14,y);y+=intro.length*5+8;
+  y=pdfSecHdr(doc,"Memorial Services",y);
+  getLineItems(o).forEach(([l,a])=>{if(y>252){doc.addPage();pdfFooter(doc);y=20;}y=pdfItem(doc,l,a,y);});
+  y+=3;doc.setDrawColor(180,180,180);doc.setLineWidth(0.3);doc.line(90,y,196,y);y+=6;
+  const dep=parseFloat(o.depositPaid||0);const bal=Math.max(0,o.totalPrice-dep);
+  doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(30,30,30);
+  doc.text("Invoice Total",130,y,"right");doc.text(fmt(o.totalPrice),196,y,"right");y+=6;
+  doc.text("Payment Received",130,y,"right");doc.text(fmt(dep),196,y,"right");y+=6;
+  doc.setFont("helvetica","bold");doc.setFontSize(10);
+  doc.text("Total Outstanding Balance",130,y,"right");doc.text(fmt(bal),196,y,"right");
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.4);doc.line(100,y+1.5,196,y+1.5);doc.line(100,y+3,196,y+3);y+=14;
+  doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.text("If a bank or solicitor is acting on your behalf, then please advise us.",14,y);y+=12;
+  if(y>240){doc.addPage();pdfFooter(doc);y=20;}
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text("Yours sincerely",14,y);y+=20;doc.text("David Crymble & Sons",14,y);
+  const invFileName="Invoice-"+ref+"-"+(o.customerName||"Customer").replace(/\s+/g,"-")+".pdf";
+  pdfFooter(doc);
+  doc.save(invFileName);
+  savePdfToDrive(doc, invFileName, "Invoice");
+}
+
+function genJobCard(){
+  const o=getOrder();if(!o)return;
+  const{jsPDF}=window.jspdf;const doc=new jsPDF();const ref="JOB-"+o.id.slice(-6).toUpperCase();
+  pdfLogo(doc);pdfRef(doc,ref);let y=54;
+  doc.setFillColor(240,240,240);doc.rect(14,y,182,8,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text("JOB CARD — STONE MASON INSTRUCTION",105,y+5.5,"center");y+=14;
+  const fld=(l,val,y)=>{doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.text(l,14,y);doc.setFont("helvetica","normal");doc.text(String(val||"—"),60,y);return y+6;};
+  y=pdfSecHdr(doc,"Customer Details",y);y=fld("Name:",o.customerName,y);y=fld("Phone:",o.phone,y);y=fld("Address:",o.address,y);y+=4;
+  y=pdfSecHdr(doc,"Deceased / Memorial",y);y=fld("Name:",o.deceasedName,y);y=fld("Date of Birth:",fmtDate(o.deceasedDob),y);y=fld("Date of Passing:",fmtDate(o.deceasedDod),y);y=fld("Cemetery:",o.cemetery||"—",y);y=fld("Grave Number:",o.graveNumber||"—",y);y+=4;
+  if(o.ownerName){y=pdfSecHdr(doc,"Grave Owner",y);y=fld("Owner Name:",o.ownerName,y);y=fld("Phone:",o.ownerPhone||"—",y);y=fld("Relationship:",o.ownerRelationship||"—",y);y+=4;}
+  y=pdfSecHdr(doc,"Headstone Specification",y);
+  y=fld("Type:",o.hsType||"—",y);y=fld("Size:",o.hsSize||"—",y);y=fld("Colour:",o.hsColour||"Black (stock)",y);y=fld("Finish:",o.hsFinish||"—",y);
+  y=fld("Surround:",o.surroundType||"None",y);if(o.surroundType)y=fld('6" Granite:',o.surroundGranite?"Yes":"No",y);
+  y=fld("Stones/Chippings:",o.stoneType||"None",y);if((o.accessories||[]).length>0)y=fld("Accessories:",(o.accessories||[]).join(", "),y);y+=4;
+  if(y>210){doc.addPage();pdfFooter(doc);y=20;}
+  y=pdfSecHdr(doc,"Inscription",y);
+  doc.setFont("helvetica","bold");doc.setFontSize(9);
+  doc.text(`Style: ${o.inscriptionStyle||"Standard"}   Colour: ${o.inscriptionColour||"Silver"}   Lines: ${o.inscriptionLines||0}   Type: ${o.inscriptionType==="additional"?"Additional":"New"}`,14,y);y+=5;
+  const insH=Math.max(26,doc.splitTextToSize(o.inscriptionText||"",170).length*7+10);
+  doc.setFillColor(252,250,246);doc.rect(14,y,182,insH,"F");doc.setDrawColor(180,160,120);doc.setLineWidth(0.5);doc.rect(14,y,182,insH);
+  doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setTextColor(138,111,58);doc.text("INSCRIPTION TEXT:",16,y+6);
+  doc.setFont("helvetica","normal");doc.setFontSize(11);doc.setTextColor(20,20,20);
+  doc.text(doc.splitTextToSize(o.inscriptionText||"[No inscription provided]",170),16,y+13);y+=insH+6;
+  if(o.artworkNotes){y=pdfSecHdr(doc,"Artwork / Design Notes",y);doc.setFont("helvetica","normal");doc.setFontSize(9.5);const al=doc.splitTextToSize(o.artworkNotes,182);doc.text(al,14,y);y+=al.length*5+6;}
+  if(y>230){doc.addPage();pdfFooter(doc);y=20;}
+  y=pdfSecHdr(doc,"Schedule",y);
+  y=fld("Proof Date:",o.proofDate?fmtDate(o.proofDate):"TBC",y);y=fld("Proof Approved:",o.artworkApproved?"Yes — approved":"No — awaiting",y);
+  y=fld("Production Start:",o.productionDate?fmtDate(o.productionDate):"TBC",y);y=fld("Installation Date:",o.installDate?fmtDate(o.installDate):"TBC",y);
+  if(o.notes){y+=4;y=pdfSecHdr(doc,"Special Instructions",y);const nl=doc.splitTextToSize(o.notes,182);doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.text(nl,14,y);y+=nl.length*5+4;}
+
+  // Cost vs Sell summary table
+  if(y>200){doc.addPage();pdfFooter(doc);y=20;}
+  y+=4;y=pdfSecHdr(doc,"Cost & Sell Summary — Internal Use Only",y);
+  // Table headers
+  doc.setFillColor(30,37,48);doc.rect(14,y,182,7,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setTextColor(184,154,94);
+  doc.text("Item",16,y+5);doc.text("Sell",120,y+5,"right");doc.text("Cost",150,y+5,"right");doc.text("Margin",196,y+5,"right");
+  y+=7;doc.setTextColor(20,20,20);
+  const costRows=[];
+  const hsItem=prices.headstones.find(h=>h.type===o.hsType&&h.size===o.hsSize);
+  if(hsItem){const sell=hsItem.sell+(o.hsColourAdj||0);costRows.push([`${o.hsType} ${o.hsSize}${o.hsColour?" ("+o.hsColour+")":""}`,sell,hsItem.cost]);}
+  if(o.surroundType){const s=prices.surrounds.find(x=>x.type===o.surroundType);if(s){costRows.push([`Surround — ${o.surroundType}`,s.sell,s.cost]);if(o.surroundGranite)costRows.push([`6" Granite Upgrade`,s.graniteExtra,Math.round(s.graniteExtra*0.75)]);}}
+  if(o.stoneType){const st=prices.stones.find(x=>x.type===o.stoneType);if(st){const p=o.surroundType?st.withSurround:st.standard;costRows.push([`Stones — ${o.stoneType}`,p,Math.round(p*0.6)]);}}
+  (o.accessories||[]).forEach(n=>{const a=prices.accessories.find(x=>x.name===n);if(a)costRows.push([n,a.sell,a.cost]);});
+  if(o.cemetery){const c=prices.cemeteries.find(x=>x.name===o.cemetery);if(c&&c.fee>0)costRows.push([`Cemetery — ${o.cemetery}`,c.fee,c.fee]);}
+  const insTotal=calcLetterCharge(o.inscriptionText||"",o.inscriptionType||"new")+(o.inscriptionLines||0)*(o.inscriptionPpl||35);
+  if(insTotal>0){const insStyle=prices.inscription.find(i=>i.style===o.inscriptionStyle);const insCost=insStyle?countLetters(o.inscriptionText||"")*insStyle.costPerLetter:Math.round(insTotal*0.5);costRows.push([`Inscription — ${o.inscriptionStyle||"Standard"}`,insTotal,insCost]);}
+  (o.extraCharges||[]).forEach(c=>{if(c.label&&c.amount)costRows.push([c.label,parseFloat(c.amount)||0,0]);});
+  costRows.forEach((r,i)=>{
+    if(i%2===0){doc.setFillColor(248,246,242);doc.rect(14,y,182,6.5,"F");}
+    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(30,30,30);
+    doc.text(String(r[0]).slice(0,55),16,y+4.5);
+    doc.text("£"+r[1].toLocaleString("en-GB",{minimumFractionDigits:2}),120,y+4.5,"right");
+    doc.text("£"+r[2].toLocaleString("en-GB",{minimumFractionDigits:2}),150,y+4.5,"right");
+    const m=r[1]-r[2];const mp=r[1]>0?Math.round((m/r[1])*100):0;
+    doc.setTextColor(mp>=20?0:mp>=10?180:200,mp>=20?150:mp>=10?100:0,mp>=20?0:0);
+    doc.text("£"+m.toLocaleString("en-GB",{minimumFractionDigits:2})+" ("+mp+"%)",196,y+4.5,"right");
+    doc.setTextColor(30,30,30);y+=6.5;
+  });
+  // Totals row
+  const tSell=costRows.reduce((s,r)=>s+r[1],0);const tCost=costRows.reduce((s,r)=>s+r[2],0);const tMargin=tSell-tCost;const tPct=tSell>0?Math.round((tMargin/tSell)*100):0;
+  doc.setFillColor(30,37,48);doc.rect(14,y,182,7,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(184,154,94);
+  doc.text("TOTAL",16,y+5);
+  doc.text("£"+tSell.toLocaleString("en-GB",{minimumFractionDigits:2}),120,y+5,"right");
+  doc.text("£"+tCost.toLocaleString("en-GB",{minimumFractionDigits:2}),150,y+5,"right");
+  doc.text("£"+tMargin.toLocaleString("en-GB",{minimumFractionDigits:2})+" ("+tPct+"%)",196,y+5,"right");
+  y+=14;
+
+  if(y>245){doc.addPage();pdfFooter(doc);y=20;}
+  doc.setDrawColor(180,180,180);doc.setLineWidth(0.4);doc.rect(14,y,85,26);doc.rect(111,y,85,26);
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(100,100,100);
+  doc.text("Stone Mason Signature",16,y+6);doc.text("Print Name: _____________________",16,y+14);doc.text("Date: ___________________________",16,y+21);
+  doc.text("DC&S Authorised By",113,y+6);doc.text("Signature: ______________________",113,y+14);doc.text("Date: ___________________________",113,y+21);
+  const jobFileName="JobCard-"+ref+"-"+(o.deceasedName||o.customerName||"Order").replace(/\s+/g,"-")+".pdf";
+  pdfFooter(doc);
+  doc.save(jobFileName);
+  savePdfToDrive(doc, jobFileName, "Job Card");
+}
+
+// ── INIT ──
+orders=localLoad();
+renderStats();
+renderList();
+fetchPrices();
+// Show loading state then sync
+v("orders-list").innerHTML='<div style="padding:40px 20px;text-align:center;color:#7a7068;font-family:Jost,sans-serif"><p>⟳ Loading orders from Google Sheets…</p></div>';
+syncFromSheet();
+
+</script>
+</body>
+</html>
